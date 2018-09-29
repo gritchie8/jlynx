@@ -1,0 +1,35 @@
+<?xml version="1.0" encoding="ISO-8859-1"?>
+<project name="jlynx" default="all">
+	<property name="zipfile" value="jlynx-1.7.1.zip" />
+	<property name="jar.file" value="jlynx-1.7.1.jar" />
+	<property name="lib.dir" value="lib" />
+	<property name="output.dir" value="classes" />
+	<property name="java.compiler" value="C:\Program Files\Java\jdk1.6.0_27\bin\javac" />
+	<target name="all" depends="clean, compile, jar, package" description="build all" />	
+	<target name="compile" depends="clean">
+		<javac srcdir="src/main/java" debug="true" target="1.5" debuglevel="lines, vars, source" destdir="${output.dir}" executable="${java.compiler}" fork="true" />
+		<echo message="Compile completed" />
+	</target>
+	<target name="jar" depends="compile">
+		<jar destfile="target/${jar.file}" compress="true" basedir="${output.dir}" includes="**/*.class">
+			<manifest>
+				<attribute name="Main-Class" value="com.googlecode.jlynx.Generator" />
+			</manifest>
+		</jar>
+	</target>
+	<target name="clean" description="cleanup all">
+		<delete dir="target" />
+		<mkdir dir="target" />
+		<delete dir="${output.dir}" />
+		<mkdir dir="${output.dir}" />
+	</target>
+	<target name="javadoc">
+		<javadoc access="public" author="true"
+			classpath="" destdir="javadoc" doctitle="jlynx API" nodeprecated="false" nodeprecatedlist="false" noindex="false" nonavbar="false" notree="false" source="1.5" sourcepath="src/test/resources;src/main/java" splitindex="true" use="true" version="true" />
+	</target>
+	<target name="package" depends="jar">
+		<zip basedir="target" includes="${jar.file}" zipfile="${zipfile}" update="false" />
+		<zip basedir=".." includes="*.txt" zipfile="${zipfile}" update="true" />
+		<zip basedir="src/test/resources/META-INF" includes="jlynx.yaml" zipfile="${zipfile}" update="true" />
+	</target>
+</project>

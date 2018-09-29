@@ -1,0 +1,43 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project>
+    <modelVersion>4.0.0</modelVersion>
+    <groupId>net.sf.jlynx</groupId>
+    <artifactId>jlynx</artifactId>
+    <name>jLynx Framework</name>
+    <version>1.6.3</version>
+    <description>Thin, light, fast persistence framework
+    </description>
+    <build>
+        <finalName>jlynx</finalName>
+        <plugins>
+            <plugin>
+                <artifactId>maven-compiler-plugin</artifactId>
+                <configuration>
+                    <source>1.3</source>
+                    <target>1.3</target>
+                </configuration>
+            </plugin>
+            <plugin>
+                <artifactId>maven-javadoc-plugin</artifactId>
+                <configuration>
+                    <stylesheet>maven</stylesheet>
+                </configuration>
+            </plugin>
+        </plugins>
+    </build>
+    <dependencies>
+        <dependency>
+            <groupId>org.slf4j</groupId>
+            <artifactId>slf4j-api</artifactId>
+            <version>1.5.3</version>
+            <scope>compile</scope>
+        </dependency>
+    </dependencies>
+    <distributionManagement>
+        <repository>
+            <id>sf</id>
+            <name>SourceForge Repository</name>
+            <url>sftp://web.sourceforge.net/home/groups/j/jl/jlynx/htdocs/repos</url>
+        </repository>
+    </distributionManagement>
+</project>
