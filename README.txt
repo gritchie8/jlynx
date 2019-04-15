@@ -4,48 +4,56 @@ jLynx RELEASE NOTES
 1. The zip distribution file contains:
 
  * jlynx.jar
- * sample config file --> i.e. jlynx.yaml
+ * starter config file i.e. jlynx.yaml
  * readme and license
 
-2. Project hosted and documented at Google Code http://code.google.com/p/jlynx-persistence-framework
-3. jLynx has zero runtime dependencies
-4. jLynx requires JDK 1.5 or higher
-5. jLynx is also available via Maven groupId: net.sf.jlynx artifactId: jlynx
+2. Project hosted @ GitHub (2018).
+3. jLynx has no runtime dependencies.
+4. jLynx requires JDK 1.5 and higher.
 
 
 jLynx CHANGE LOG
 ----------------
 
-v1.7.1 (23-Oct-2011)
+v1.8.0 (Apr-2019)
+
+  - cleanup
+  - renamed package
+  - added annotations @Column, @Table
+  - removed setAutoCommit(), rollback(), commit(), setEntity() from interface
+  - added getConnection() so developer can manipulate Connection object directly
+  - tested on H2 database
+
+v1.7.1 (Oct-2011)
 
   - improved logging for better performance
 
-
-v1.7.0 (20-Dec-2010)
+v1.7.0 (Dec-2010)
 
   - switched to Java 1.5 (previous versions are 1.3 compatible)
   - switched to Java logging (replaces SLF4J)
-  - changed package name from net.sf -> com.googlecode
+  - changed package name from net.sf -> com.github
   - added constructor to DAOImpl, signature permits no configuration usage of jlynx (i.e. no YAML file)
   - jlynx.yaml is optional now (see above)
   - added setBean() method
 
 
-v1.6.3 (28-Sep-08)
+v1.6.3 (Sep-08)
 
     - removed 'net.sf.jlynx.ajax' package (recommend Spring MVC if you were using this)
     - switched to IntelliJ IDEA (thanks JetBrains!)
     - switched build system to Ant+Ivy
     - jlynx.yaml resource can be now be set in file system using System property 'jlynx.yaml.file' or in classpath at META-INF/jlynx.yaml (default)
     - updated SLF4J to v1.5.3
+    - last version available via Maven package manager
 
-v1.6.2 (9-Sep-08)
+v1.6.2 (Sep-08)
 
     - several more JDK 1.3 issues corrected
     - adjusted escape character & sequencing in BeanUtils#toJSON
     - could not deploy to public Maven2 repo
 
-v1.6.1 (1-Sep-08)
+v1.6.1 (Sep-08)
 
     - adjusted primary key initialization to address DERBY bug
     - fixed source code compatibility issue that affected JVM's 1.3/1.4 (goal remains to keep jLynx JDK 1.3 compatible)
@@ -58,19 +66,19 @@ v1.6.0 (Aug-08)
     - renamed List fetching methods to make it more intuitive
     - added column name mappings to jlynx.yaml for cases when POJO fields do not match column names in database
 
-v1.5.2 (26-Jul-08)
+v1.5.2 (Jul-08)
 
 	- fixed bug in YAML config (parsing failed when named-queries was not present)
 	- removed XML config option
 	- removed sample webapp from zip download on Google (see Wiki for usage and examples)
 
-v1.5.1 (3-Jul-08)
+v1.5.1 (Jul-08)
 
 	- added YAML configuration (jlynx.xml is deprecated and will be removed next release!)
 	- place jlynx.yaml in META-INF (see project page for sample)
 	- updated to most recent release of SLF4J
 
-v1.5.0 (3-May-08)
+v1.5.0 (May-08)
 
 	- reverted back to JDK 1.3 and SLF4J logging
 	- added String[], int[] and Integer[] setter support for POJOs
@@ -79,7 +87,7 @@ v1.5.0 (3-May-08)
 	- added attributes in jlynx.xml for date and timestamp pattern conversion
 	- revised DTD is: <!DOCTYPE jlynx PUBLIC "-//TOPMIND//DTD JLYNX 1.5/EN" "http://www.topmind.biz/jlynx/jlynx-1.5.dtd">
 	
-v1.4.5b (21-Mar-08)
+v1.4.5b (Mar-08)
 
 	- adjusted json output in #jsonArray (removed a JS comment)
 
@@ -105,25 +113,25 @@ v1.4.4 (Jan-08)
 	- removed SLF4J dependency in favor of JDK logging
 	- POJO java.util.List fields are now skipped
 
-v1.4.3 (21-Sep-07)
+v1.4.3 (Sep-07)
 
 	- fixed bug affecting CRUD operations tables with composite primary keys
 	- bug appears as a result of v1.4.2 changes
 
-v1.4.2 (28-Aug-07)
+v1.4.2 (Aug-07)
 
 	- adjusted / improved save() method by adding a test select query
 
-v1.4.1 (24-Jul-07)
+v1.4.1 (Jul-07)
 
 	- bug fix in setConnection(); db server type was not set properly
 	- packaging improved for webapp (jLynx Servlet maven project)
 
-v1.4.0(b) (15-Jul-07)
+v1.4.0(b) (Jul-07)
 
 	- improved webapp; introduced an extendable servlet that performs CRUD operations based on HTML input name
 
-v1.4.0 (9-Jul-07)
+v1.4.0 (Jul-07)
 
 	- extensive changes to Relational interface and re-factoring of entire implemention
 	- jlynx.xml now has query definitions only!
@@ -133,7 +141,7 @@ v1.4.0 (9-Jul-07)
 	- jLynx DTD v1.4 is at http://www.topmind.biz/jlynx/1.4/jlynx.dtd
 	- improved webapp and code generation
 
-v1.3.8 (17-Jun-07)
+v1.3.8 (Jun-07)
 
     - added Relational.setConnection(); now you can use jlynx without an XML config file
     - changed Relational interface for setter methods to promote more friendly syntax
@@ -141,22 +149,22 @@ v1.3.8 (17-Jun-07)
     - fixed open connection in ConfigParser initializer
     - added Column annotation for JPA bean generation
 
-v1.3.7 (1-Jun-07)
+v1.3.7 (Jun-07)
 
     - added JPA bean generation to code generator (you asked for it)
 
-v1.3.6 (14-Apr-07)
+v1.3.6 (Apr-07)
 
     - fixed bug affecting code generator (detected on SQL Server)
     - added toJSON output method
 
-v1.3.5 (8-Apr-07)
+v1.3.5 (Apr-07)
 
     - fixed AJAX bug in sample web app
     - fixed code generator bug affecting PostgreSQL
     - moved source code from SourceForge to Google
 
-v1.3.4 (20-Mar-07)
+v1.3.4 (Mar-07)
 
     - fixed bug in RelationalFactory affecting entity name auto-mapping to class name
     - add overloaded getResultList method the returns an XML-format String instead of List
@@ -164,7 +172,7 @@ v1.3.4 (20-Mar-07)
     - switched to in-memory version of hsql database (for testing)
     - NEW sample web app!
 
-v1.3.3 (5-Mar-07)
+v1.3.3 (Mar-07)
 
     - added toXml() methods to Relational interface and impl
     - changed getResultList() to accept SQL statement that is not configured in jlynx.xml
