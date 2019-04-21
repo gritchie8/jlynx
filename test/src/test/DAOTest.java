@@ -85,6 +85,12 @@ public class DAOTest extends TestCase {
         }
 
         assertTrue(list.size() > 50);
-        Logger.getLogger("jlynx").info("List");
+        for (PersonBean p : list) {
+            int[] prefs = {1, 2};
+            p.setPrefs(prefs);
+            dao.setBean(p);
+            dao.update();
+            assertTrue(dao.delete());
+        }
     }
 }

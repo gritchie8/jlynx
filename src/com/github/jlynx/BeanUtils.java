@@ -9,7 +9,10 @@ import java.sql.Date;
 import java.sql.Timestamp;
 import java.text.ParseException;
 import java.text.SimpleDateFormat;
-import java.util.*;
+import java.util.HashMap;
+import java.util.Map;
+import java.util.Set;
+import java.util.TreeSet;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
@@ -22,6 +25,9 @@ class BeanUtils {
     private static Level finest = Level.FINEST;
     private static Logger logger = Logger.getAnonymousLogger();
 
+    private BeanUtils() {
+    }
+
     private static Date convertDate(String dtStr) {
 
         SimpleDateFormat format = new SimpleDateFormat("MM/dd/yyyy");
@@ -32,11 +38,6 @@ class BeanUtils {
             logger.severe("Trouble setting Date! " + dtStr);
             return null;
         }
-    }
-
-    private static String convertDate(java.sql.Date dt) {
-        SimpleDateFormat format = new SimpleDateFormat("MM/dd/yyyy");
-        return format.format(dt);
     }
 
     private static Timestamp convertTimestamp(String dtStr) {
@@ -56,7 +57,7 @@ class BeanUtils {
         }
     }
 
-    static String decapitalize(String fieldName) {
+    private static String decapitalize(String fieldName) {
         return Introspector.decapitalize(fieldName);
     }
 
@@ -94,9 +95,9 @@ class BeanUtils {
             }
 
             if (method.indexOf("get") == 0) {
-                retList.add(method.substring(3, method.length()));
+                retList.add(method.substring(3));
             } else if (method.indexOf("is") == 0) {
-                retList.add(method.substring(2, method.length()));
+                retList.add(method.substring(2));
             }
 
         }
@@ -266,7 +267,7 @@ class BeanUtils {
                             if (cls.getName().equals("java.sql.Timestamp")) {
                                 if (value instanceof String) {
                                     try {
-                                        method.invoke(target, new Object[]{convertTimestamp(value.toString())});
+                                        method.invoke(target, convertTimestamp(value.toString()));
 
                                     } catch (Exception e3) {
                                         e3.printStackTrace();
@@ -275,7 +276,7 @@ class BeanUtils {
                             } else if (cls.getName().equals("java.sql.Date")) {
                                 if (value instanceof String) {
                                     try {
-                                        method.invoke(target, new Object[]{convertDate(value.toString())});
+                                        method.invoke(target, convertDate(value.toString()));
 
                                     } catch (Exception e3) {
                                         e3.printStackTrace();
@@ -289,101 +290,6 @@ class BeanUtils {
                 break;
             }
         }
-    }
-
-    static String toJSON(Object bean) {
-
-        if (bean == null)
-            return null;
-
-        StringBuffer result = new StringBuffer("{\n");
-
-        Map<?, ?> pairs;
-        if (bean instanceof Map)
-            pairs = (Map<?, ?>) bean;
-        else
-            pairs = describe(bean);
-
-        Iterator<?> iter = pairs.keySet().iterator();
-        while (iter.hasNext()) {
-
-            Object obj = iter.next();
-
-            result.append("  \"").append(obj).append("\": ");
-            Object value = pairs.get(obj);
-            if (value != null) {
-                // adjusted for v1.6.2
-                if (value instanceof String) {
-                    value = StringUtils.replace(value.toString(), "\\", "\\\\");
-                    value = StringUtils.replace(value.toString(), "\"", "\\\"");
-                    value = StringUtils.replace(value.toString(), "\'", "\\\'");
-                    value = StringUtils.replace(value.toString(), "\n", "\\n");
-                    value = StringUtils.replace(value.toString(), "\r", "\\r");
-                    value = StringUtils.replace(value.toString(), "\b", "\\b");
-                    value = StringUtils.replace(value.toString(), "\t", "\\t");
-                } else if (value instanceof Timestamp) {
-                    long time = ((Timestamp) value).getTime();
-                    value = "" + time + "";
-                } else if (value instanceof Date) {
-                    value = convertDate((Date) value);
-                }
-
-                result.append("\"").append(value).append("\"");
-            } else
-                result.append(value);
-
-            if (iter.hasNext())
-                result.append(",\n");
-            else
-                result.append("\n}");
-
-        }
-
-        return result.toString();
-    }
-
-    static String toXml(List<?> list, String element) {
-        StringBuffer xml = new StringBuffer();
-        Iterator<?> iter = list.iterator();
-        while (iter.hasNext()) {
-            xml.append(toXml(iter.next(), element)).append("\n");
-        }
-        return xml.toString();
-    }
-
-    static String toXml(Object bean, String element) {
-
-        StringBuffer sb = new StringBuffer("<?xml version=\"1.0\"?>\n");
-
-        if (bean == null)
-            return null;
-        else {
-
-            String className = bean.getClass().getName();
-            if (element == null)
-                element = className.substring(className.lastIndexOf(".") + 1)
-                        .toLowerCase();
-            sb.append("<").append(element).append(" class=\"")
-                    .append(className).append("\">\n");
-
-            Map<?, ?> props = BeanUtils.describe(bean);
-            Iterator<?> keys = props.keySet().iterator();
-            while (keys.hasNext()) {
-                String key = keys.next().toString();
-                Object value = props.get(key);
-                if (value == null)
-                    value = "";
-                sb.append(" <").append(key).append(">").append(value)
-                        .append("</").append(key).append(">\n");
-            }
-
-            sb.append("</").append(element).append(">");
-
-        }
-        return sb.toString();
-    }
-
-    private BeanUtils() {
     }
 
 }

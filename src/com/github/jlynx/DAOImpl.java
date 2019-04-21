@@ -374,8 +374,7 @@ public class DAOImpl implements DAO {
                 }
 
                 // do fix here for DB2 numeric types
-                if (DataTypeMappings.isNumber(BeanUtils
-                        .getValue(colName, _bean))) {
+                if (DataTypeMappings.isNumber(BeanUtils.getValue(colName, _bean))) {
                     delimiter = "";
                 } else
                     delimiter = "'";
