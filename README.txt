@@ -4,7 +4,6 @@ jLynx RELEASE NOTES
 1. The zip distribution file contains:
 
  * jlynx.jar
- * starter config file i.e. jlynx.yaml
  * readme and license
 
 2. Project hosted @ GitHub (2018).
@@ -17,12 +16,23 @@ jLynx CHANGE LOG
 
 v1.8.0 (Apr-2019)
 
-  - cleanup
+  - fairly drastic cleanup/overhaul
+  - removed YAML configuration
   - renamed package
-  - added annotations @Column, @Table
-  - removed setAutoCommit(), rollback(), commit(), setEntity() from interface
+  - added annotations for tables and columns, @Table is required
+  - @Column is optional for the property, is necessary when Column and property mismatch
+
+  >>>>>
+
+    @Table("T_PERSON")
+    public class Person {
+      @Column("BIRTHDAY")
+      private Date dob;
+
+  - simplified DAO interface removing XML and JSON functionality as there are better marshallers these days
   - added getConnection() so developer can manipulate Connection object directly
-  - tested on H2 database
+  - tested changes on H2 database
+  - logging changes
 
 v1.7.1 (Oct-2011)
 
