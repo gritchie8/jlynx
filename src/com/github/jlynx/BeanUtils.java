@@ -13,8 +13,6 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.Set;
 import java.util.TreeSet;
-import java.util.logging.Level;
-import java.util.logging.Logger;
 
 /**
  * Bean utils used by jLynx.
@@ -22,8 +20,6 @@ import java.util.logging.Logger;
 class BeanUtils {
 
     private static Map<Class<?>, Object[]> cache = new HashMap<Class<?>, Object[]>();
-    private static Level finest = Level.FINEST;
-    private static Logger logger = Logger.getAnonymousLogger();
 
     private BeanUtils() {
     }
@@ -35,7 +31,6 @@ class BeanUtils {
         try {
             return new Date(format.parse(dtStr).getTime());
         } catch (ParseException e) {
-            logger.severe("Trouble setting Date! " + dtStr);
             return null;
         }
     }
@@ -43,16 +38,12 @@ class BeanUtils {
     private static Timestamp convertTimestamp(String dtStr) {
 
         String pattern = (dtStr.length() > 10) ? "MM/dd/yyyy hh:mm:ss.sss" : "MM/dd/yyyy";
-        if (logger.isLoggable(Level.FINEST))
-            logger.finest("Setting timestamp using pattern: " + pattern);
-
         SimpleDateFormat format = new SimpleDateFormat(pattern);
 
         try {
             long time = format.parse(dtStr).getTime();
             return new Timestamp(time);
         } catch (ParseException e) {
-            logger.severe("Touble setting Timestamp! " + dtStr);
             return null;
         }
     }
@@ -81,16 +72,10 @@ class BeanUtils {
         for (Method m : methods) {
 
             String method = m.getName();
-            if (logger.isLoggable(finest))
-                logger.finest(method + " ==> " + m.getReturnType() + " ==> "
-                        + m.getReturnType().isArray());
-
             if (m.getReturnType().isArray() || m.getReturnType().isInterface()
                     || m.getReturnType().equals(void.class)
                     || m.getReturnType().equals(Class.class)
                     || m.getParameterTypes().length > 0) {
-                if (logger.isLoggable(finest))
-                    logger.finest("Removing a List or Array field! " + method);
                 continue;
             }
 
@@ -137,9 +122,6 @@ class BeanUtils {
      */
     static Object getValue(String property, Object target) {
 
-        if (logger.isLoggable(finest))
-            logger.finest("Seeking property=" + property + " from " + target);
-
         // checking @Column
         for (Field field : target.getClass().getDeclaredFields())
             if (field.isAnnotationPresent(Column.class) && property.equalsIgnoreCase(field.getAnnotation(Column.class).value())) {
@@ -159,19 +141,18 @@ class BeanUtils {
         for (Method method : methods) {
 
             if (get.equalsIgnoreCase(method.getName()) || is.equalsIgnoreCase(method.getName())) {
-
-                if (logger.isLoggable(finest))
-                    logger.finest("methodName=" + method.getName());
-
+                String warning = null;
                 try {
                     return method.invoke(target, (Object[]) null);
                 } catch (IllegalArgumentException ex) {
-                    logger.warning(ex.getMessage());
+                    warning = ex.getMessage();
                 } catch (IllegalAccessException ex) {
-                    logger.warning(ex.getMessage());
+                    warning = ex.getMessage();
                 } catch (InvocationTargetException ex) {
-                    logger.warning(ex.getMessage());
+                    warning = ex.getMessage();
                 }
+                if (warning != null)
+                    System.err.println(warning);
 
             }
         }
@@ -184,14 +165,8 @@ class BeanUtils {
      */
     static void setValue(String property, Object target, Object value) {
 
-        String test = property.toLowerCase() + "." + target.getClass().getName();
-        if (logger.isLoggable(finest))
-            logger.finest(test);
-
+        //String test = property.toLowerCase() + "." + target.getClass().getName();
         property = "set" + property;
-
-        if (logger.isLoggable(finest))
-            logger.finest("setting value=" + value);
 
         Method[] methods = cache.containsKey(target.getClass()) ?
                 (Method[]) cache.get(target.getClass()) : target.getClass().getDeclaredMethods();
@@ -205,12 +180,8 @@ class BeanUtils {
 
                     Class<?> cls = paramClass[0];
 
-                    if (logger.isLoggable(finest))
-                        logger.finest("type=" + cls);
                     try {
-
                         method.invoke(target, value);
-
                     } catch (Exception ex) {
 
                         // handle Integer and int arrays
@@ -244,8 +215,6 @@ class BeanUtils {
                                 return;
 
                             } catch (Exception e3) {
-                                if (logger.isLoggable(finest))
-                                    logger.finest("Could not set array");
                                 return;
                             }
                         }
@@ -254,12 +223,7 @@ class BeanUtils {
                         try {
 
                             ctor = cls.getConstructor(value.getClass());
-
-                            if (logger.isLoggable(finest))
-                                logger.finest("ctor = " + ctor);
-
                             Object newVal = ctor.newInstance(value);
-
                             method.invoke(target, newVal);
 
                         } catch (Exception e2) {
@@ -268,7 +232,6 @@ class BeanUtils {
                                 if (value instanceof String) {
                                     try {
                                         method.invoke(target, convertTimestamp(value.toString()));
-
                                     } catch (Exception e3) {
                                         e3.printStackTrace();
                                     }

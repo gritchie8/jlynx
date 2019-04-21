@@ -6,7 +6,7 @@ out/
 /.idea
 
 *.class
-*.iml
 *.DS_Store
+jlynx.iml
 
 

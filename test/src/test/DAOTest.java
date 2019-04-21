@@ -8,6 +8,7 @@ import java.sql.Date;
 import java.sql.SQLException;
 import java.sql.Timestamp;
 import java.util.List;
+import java.util.logging.Level;
 import java.util.logging.Logger;
 
 public class DAOTest extends TestCase {
@@ -15,6 +16,7 @@ public class DAOTest extends TestCase {
     private PersonBean person = new PersonBean(1);
     private PersonCompany personCompany = new PersonCompany();
     private DAO dao;
+    private Logger logger = Logger.getLogger(DAO.class.getName());
 
     @Override
     public void setUp() {
@@ -60,14 +62,15 @@ public class DAOTest extends TestCase {
     }
 
     public void test_InsertMany() throws SQLException {
-        int i = 50;
-        while (i < 100) {
+        int i = 90;
+        while (i < 105) {
             person = new PersonBean(++i);
             person.setDateOfBirth(Date.valueOf("2010-01-01"));
             person.setSurName("P%$@#$%@# ------ " + i);
+            person.setModified(new Timestamp(new java.util.Date().getTime()));
             dao.setBean(person);
             dao.insert();
-            Logger.getAnonymousLogger().info(person.getSurName());
+
         }
         assertNotNull(dao.getConnection());
     }
@@ -84,13 +87,35 @@ public class DAOTest extends TestCase {
             list = (List<PersonBean>) dao.getList(PersonBean.class, "select * from person", null);
         }
 
-        assertTrue(list.size() > 50);
+        assertTrue(list.size() > 10);
+        dao.executeSql("ALTER TABLE PERSON ADD COLUMN RESUME CLOB", null);
+        dao.executeSql("ALTER TABLE PERSON ADD COLUMN IMAGE BLOB", null);
+
         for (PersonBean p : list) {
             int[] prefs = {1, 2};
             p.setPrefs(prefs);
             dao.setBean(p);
+            p.setDateOfBirth(Date.valueOf("1995-06-06"));
+            p.setResume("!@#$@#!");
+            dao.saveNulls(true);
             dao.update();
             assertTrue(dao.delete());
         }
+    }
+
+    public void test_H2SQL() throws SQLException {
+        dao = DAOImpl.newInstance("jdbc:h2:mem:jlynxdb", null);
+        dao.executeSql("CREATE TABLE PERSON (PERSONID INT PRIMARY KEY, IMAGE BLOB, RESUME CLOB, LASTNAME VARCHAR(40))",
+                null);
+        person = new PersonBean(1005);
+        person.setSurName("$#!@#$#-#$!@$");
+        dao.setBean(person);
+        dao.save();
+        dao.delete();
+        dao.executeSql("DROP TABLE PERSON", null);
+    }
+
+    public void test_LoggingLevel() {
+        assertTrue(logger.isLoggable(Level.FINE));
     }
 }

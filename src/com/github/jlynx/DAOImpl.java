@@ -9,7 +9,6 @@ import java.io.InputStream;
 import java.lang.reflect.Field;
 import java.sql.*;
 import java.util.*;
-import java.util.logging.Level;
 import java.util.logging.Logger;
 
 /**
@@ -19,9 +18,8 @@ import java.util.logging.Logger;
  */
 public class DAOImpl implements DAO {
 
-    static final Map<String, Object> connMap = new TreeMap<String, Object>();
     private static final Map<String, String> entityMap = new TreeMap<String, String>();
-    private Logger _logger;
+    private static Logger logger = Logger.getLogger(DAO.class.getName());
     private Object _bean;
     private Connection _conn;
     private Properties _cnProps;
@@ -35,16 +33,9 @@ public class DAOImpl implements DAO {
     private Statement _stmt;
     private Map<String, String> _colMap = null;
     private String _cnUrl;
-    //private String _driver;
 
     private DAOImpl() {
-        try {
-            _logger = Logger.getLogger(getClass().getName(), "jlynx-logging");
-        } catch (MissingResourceException t) {
-            _logger = Logger.getLogger(getClass().getName());
-            _logger.severe(t.getMessage());
-        }
-        _logger.log(Level.INFO, "Created");
+        logger.fine("Creating");
     }
 
     /**
@@ -52,7 +43,7 @@ public class DAOImpl implements DAO {
      *
      * @param databaseUrl     JDBC database connection String
      * @param connectionProps JDBC properties
-     * @throws SQLException - database exception
+     * @return DAO
      */
     public static DAO newInstance(String databaseUrl, Properties connectionProps) {
         DAOImpl dao = new DAOImpl();
@@ -65,7 +56,7 @@ public class DAOImpl implements DAO {
      * Create a <code>com.github.jlynx.DAO</code> instance.
      *
      * @param dataSourceName JNDI
-     * @return
+     * @return DAO
      */
     public static DAO newInstance(String dataSourceName) {
         DAOImpl dao = new DAOImpl();
@@ -74,48 +65,44 @@ public class DAOImpl implements DAO {
     }
 
     // pre-condition: ResultSet next() called
-    private void setValues(ResultSet rs, Object object) throws Exception {
+    private void setValues(ResultSet rs, Object object) throws SQLException {
 
-        try {
+        int colCount = rs.getMetaData().getColumnCount();
+        for (int i = 1; i <= colCount; i++) {
 
-            int colCount = rs.getMetaData().getColumnCount();
-            for (int i = 1; i <= colCount; i++) {
+            String colName = rs.getMetaData().getColumnName(i);
+            Object value;
+            String propName = getProp(colName);
+            int type = rs.getMetaData().getColumnType(i);
+            if (type == Types.BLOB || type == Types.BINARY || type == Types.LONGVARBINARY) {
+                value = rs.getBlob(i);
+                if (value != null)
+                    value = ((Blob) value).getBinaryStream();
 
-                String colName = rs.getMetaData().getColumnName(i);
-                Object value;
-                String propName = getProp(colName);
-                int type = rs.getMetaData().getColumnType(i);
-                if (type == Types.BLOB || type == Types.BINARY || type == Types.LONGVARBINARY) {
-                    value = rs.getBlob(i);
-                    if (value != null)
-                        value = ((Blob) value).getBinaryStream();
+            } else if (type == Types.VARCHAR || type == Types.CLOB || type == Types.LONGVARCHAR) {
+                value = rs.getString(i);
+            } else
+                value = rs.getObject(i);
 
-                } else if (type == Types.VARCHAR || type == Types.CLOB || type == Types.LONGVARCHAR) {
-                    value = rs.getString(i);
-                } else
-                    value = rs.getObject(i);
+            if (!entityMap.containsKey(object.getClass().getName()) && object.getClass().isAnnotationPresent(Table.class))
+                entityMap.put(object.getClass().getCanonicalName(), object.getClass().getAnnotation(Table.class).value());
 
-                if (!entityMap.containsKey(object.getClass().getName()) && object.getClass().isAnnotationPresent(Table.class))
-                    entityMap.put(object.getClass().getCanonicalName(), object.getClass().getAnnotation(Table.class).value());
+            for (Field field : object.getClass().getDeclaredFields())
+                if (field.isAnnotationPresent(Column.class) && colName.equalsIgnoreCase(field.getAnnotation(Column.class).value())) {
+                    propName = field.getName(); //todo - cache?
+                    break;
+                }
 
-                for (Field field : object.getClass().getDeclaredFields())
-                    if (field.isAnnotationPresent(Column.class) && colName.equalsIgnoreCase(field.getAnnotation(Column.class).value())) {
-                        propName = field.getName(); //todo - cache?
-                        break;
-                    }
+            BeanUtils.setValue(propName, object, value);
 
-                BeanUtils.setValue(propName, object, value);
+        }// end for
 
-            }// end for
 
-        } catch (SQLException e) {
-            throw e;
-        }
     }
 
     private void setClass(Class<?> aClass) throws IllegalAccessException, InstantiationException {
         if (aClass.isAnnotationPresent(Table.class)) {
-            Table table = (Table) aClass.getAnnotation(Table.class);
+            Table table = aClass.getAnnotation(Table.class);
             _entityName = table.value();
             _bean = aClass.newInstance();
         } else
@@ -187,7 +174,7 @@ public class DAOImpl implements DAO {
             if (partKeyValue == null)
                 throw new SQLException("Primary Key value is missing! col=" + key + " " + obj + " prop=" + prop + "");
 
-            String delimiter = DataTypeMappings.isNumber(partKeyValue) ? "" : "'";
+            String delimiter = SchemaUtil.isNumber(partKeyValue) ? "" : "'";
 
             sql.append(" = ").append(delimiter).append(partKeyValue.toString()).append(delimiter);
         }
@@ -237,7 +224,6 @@ public class DAOImpl implements DAO {
         while (i.hasNext()) {
 
             Object val = i.next();
-            // logger.fine(val);
             String oracleDate1 = "";
             String oracleDate2 = "";
 
@@ -273,7 +259,7 @@ public class DAOImpl implements DAO {
 
             Object field = BeanUtils.getValue(fields[j], obj);
 
-            delimiter = (DataTypeMappings.isNumber(field)) ? "" : "'";
+            delimiter = (SchemaUtil.isNumber(field)) ? "" : "'";
 
             j++;
 
@@ -287,11 +273,10 @@ public class DAOImpl implements DAO {
         }
 
         String result = "INSERT INTO " + _entityName + " (" + StringUtils.fixNulls(sql.toString());
-        _logger.info(result);
         return result;
     }
 
-    private String createSelectStmt() throws NoSuchMethodException, SQLException {
+    private String createSelectStmt() throws SQLException {
         return "SELECT * FROM " + _entityName + createFilterStmt();
     }
 
@@ -303,10 +288,8 @@ public class DAOImpl implements DAO {
 
         String where = createFilterStmt();
 
-        Map<String, Object> map = new TreeMap<String, Object>();
-        map.putAll(BeanUtils.describe(_bean));
-        Set<String> remove = new HashSet<String>();
-        remove.addAll(_keys);
+        Map<String, Object> map = new TreeMap<String, Object>(BeanUtils.describe(_bean));
+        Set<String> remove = new HashSet<String>(_keys);
 
         for (String prop : remove)
             map.remove(getProp(prop));
@@ -374,7 +357,7 @@ public class DAOImpl implements DAO {
                 }
 
                 // do fix here for DB2 numeric types
-                if (DataTypeMappings.isNumber(BeanUtils.getValue(colName, _bean))) {
+                if (SchemaUtil.isNumber(BeanUtils.getValue(colName, _bean))) {
                     delimiter = "";
                 } else
                     delimiter = "'";
@@ -403,8 +386,7 @@ public class DAOImpl implements DAO {
 
         try {
             sql = "DELETE FROM " + _entityName + createFilterStmt();
-
-            // logger.fine(sql);
+            logger.fine(sql);
             _stmt = _conn.createStatement();
             int result = _stmt.executeUpdate(sql);
             return result == 1;
@@ -423,7 +405,7 @@ public class DAOImpl implements DAO {
 
         boolean result;
         connect();
-
+        logger.fine(sql);
         _ps = _conn.prepareStatement(sql);
         setParams(p);
         result = _ps.execute();
@@ -470,7 +452,7 @@ public class DAOImpl implements DAO {
         _ps = this._conn.prepareStatement(sql);
         setParams(p);
         setClass(resultClass);
-
+        logger.fine(sql);
         return executeQuery();
     }
 
@@ -511,7 +493,7 @@ public class DAOImpl implements DAO {
         _keys = null;
         if (_conn != null && getEntity() != null) {
             try {
-                _keys = PK.getPK(_conn, getEntity());
+                _keys = SchemaUtil.getPK(_conn, getEntity());
             } catch (SQLException e) {
                 throw e;
             }
@@ -528,6 +510,7 @@ public class DAOImpl implements DAO {
         try {
             String sql = createInsertStmt();
             _stmt = _conn.createStatement();
+            logger.fine(sql);
             result = _stmt.executeUpdate(sql);
             if (_dbVendor == SchemaUtil.MSSQL && result == 1) {
                 try {
@@ -563,7 +546,6 @@ public class DAOImpl implements DAO {
             }
 
         } catch (SQLException e) {
-            //_logger.severe(e.getMessage());
             throw e;
         } finally {
             cleanup();
@@ -613,8 +595,7 @@ public class DAOImpl implements DAO {
         int result = 0;
 
         if (!_conn.getAutoCommit()) {
-            throw new SQLException(
-                    "save() not supported in transaction, use insert() or update()!");
+            throw new SQLException("save() not supported in transaction, use insert() or update() explicitly instead");
         } else {
             String where;
             try {
@@ -625,34 +606,27 @@ public class DAOImpl implements DAO {
                 return result;
             }
 
-            //setAutoCommit(false);
+            ResultSet resultset = null;
             try {
 
                 // 1. find out if object exists in DB first
                 // 2. if(exists) update else insert
-
                 StringBuffer select = new StringBuffer("SELECT ");
                 select.append(getDbColumn(_keys.iterator().next()));
                 select.append(" FROM ").append(getEntity()).append(where);
-
+                String sql = select.toString();
+                logger.fine(sql);
                 _stmt = _conn.createStatement();
-                ResultSet resultset = _stmt.executeQuery(select.toString());
+                resultset = _stmt.executeQuery(sql);
                 boolean doUpdate = resultset.next();
-                resultset.close();
-
-                if (doUpdate)
-                    result = update();
-                else
-                    result = insert();
+                result = doUpdate ? update() : insert();
 
             } catch (Exception e) {
-                //_logger.severe(e.getMessage());
                 throw new SQLException(e.getMessage());
-
             } finally {
-                cleanup();
+                if (resultset != null)
+                    resultset.close();
             }
-
         }
 
         return result;
@@ -669,8 +643,8 @@ public class DAOImpl implements DAO {
         try {
             boolean result;
             String sql = createSelectStmt();
-
             _stmt = _conn.createStatement();
+            logger.fine(sql);
             ResultSet resultset = _stmt.executeQuery(sql);
 
             if ((result = resultset.next()))
@@ -687,9 +661,7 @@ public class DAOImpl implements DAO {
                 throw new SQLException(e.getMessage());
 
         } finally {
-
             cleanup();
-
         }
     }
 
@@ -728,6 +700,7 @@ public class DAOImpl implements DAO {
         try {
             int result;
             String sql = createUpdateStmt();
+            logger.fine(sql);
             _stmt = _conn.createStatement();
             result = _stmt.executeUpdate(sql);
             return result;

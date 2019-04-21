@@ -16,9 +16,9 @@ jLynx CHANGE LOG
 
 v1.8.0 (Apr-2019)
 
-  - fairly drastic cleanup/overhaul
+  - fairly drastic cleanup and overhaul
   - removed YAML configuration
-  - renamed package
+  - renamed package to com.github.jlynx
   - added annotations for tables and columns, @Table is required
   - @Column is optional for the property, is necessary when Column and property mismatch
 
@@ -31,7 +31,6 @@ v1.8.0 (Apr-2019)
 
   - simplified DAO interface removing XML and JSON functionality as there are better marshallers these days
   - added getConnection() so developer can manipulate Connection object directly
-  - tested changes on H2 database
   - logging changes
 
 v1.7.1 (Oct-2011)
