@@ -1,14 +1,9 @@
 jLynx RELEASE NOTES
 -------------------
 
-1. The zip distribution file contains:
-
- * jlynx.jar
- * readme and license
-
-2. Project hosted @ GitHub (2018).
-3. jLynx has no runtime dependencies.
-4. jLynx requires JDK 1.5 and higher.
+1. Project hosted @ GitHub (2018).
+2. jLynx has no runtime dependencies. Logging is java.util.logging.
+3. jLynx requires JDK 1.5 and higher.
 
 
 jLynx CHANGE LOG
