@@ -18,8 +18,10 @@ import java.util.logging.Logger;
  */
 public class DAOImpl implements DAO {
 
-    private static final Map<String, String> entityMap = new TreeMap<String, String>();
+    private static Map<String, String> entityMap = new TreeMap<String, String>();
+    //private static Map<String, String> columns = new HashMap<String, String>();
     private static Logger logger = Logger.getLogger(DAO.class.getName());
+
     private Object _bean;
     private Connection _conn;
     private Properties _cnProps;
@@ -31,7 +33,7 @@ public class DAOImpl implements DAO {
     private PreparedStatement _ps;
     private ResultSet _rs;
     private Statement _stmt;
-    private Map<String, String> _colMap = null;
+
     private String _cnUrl;
 
     private DAOImpl() {
@@ -72,7 +74,7 @@ public class DAOImpl implements DAO {
 
             String colName = rs.getMetaData().getColumnName(i);
             Object value;
-            String propName = getProp(colName);
+            String propName = colName;
             int type = rs.getMetaData().getColumnType(i);
             if (type == Types.BLOB || type == Types.BINARY || type == Types.LONGVARBINARY) {
                 value = rs.getBlob(i);
@@ -165,17 +167,13 @@ public class DAOImpl implements DAO {
 
         for (String key : _keys) {
 
-            String prop = getProp(key);
-
             sql.append(and).append(getDbColumn(key));
-
-            final Object partKeyValue = BeanUtils.getValue(prop, obj);
+            final Object partKeyValue = BeanUtils.getValue(key, obj);
 
             if (partKeyValue == null)
-                throw new SQLException("Primary Key value is missing! col=" + key + " " + obj + " prop=" + prop + "");
+                throw new SQLException("Primary Key value is missing! col=" + key + " " + obj);
 
             String delimiter = SchemaUtil.isNumber(partKeyValue) ? "" : "'";
-
             sql.append(" = ").append(delimiter).append(partKeyValue.toString()).append(delimiter);
         }
 
@@ -228,10 +226,8 @@ public class DAOImpl implements DAO {
             String oracleDate2 = "";
 
             if (_dbVendor == SchemaUtil.ORACLE) {
-
                 // Oracle fix for Dates
-                if (java.sql.Timestamp.class.equals(BeanUtils.getType(
-                        fields[j], obj))) {
+                if (java.sql.Timestamp.class.equals(BeanUtils.getType(fields[j], obj))) {
                     oracleDate1 = "to_date(";
                     oracleDate2 = ",'yyyy-mm-dd hh24:mi:ss\".999\"')";
                 }
@@ -258,7 +254,6 @@ public class DAOImpl implements DAO {
             }
 
             Object field = BeanUtils.getValue(fields[j], obj);
-
             delimiter = (SchemaUtil.isNumber(field)) ? "" : "'";
 
             j++;
@@ -292,7 +287,7 @@ public class DAOImpl implements DAO {
         Set<String> remove = new HashSet<String>(_keys);
 
         for (String prop : remove)
-            map.remove(getProp(prop));
+            map.remove(prop);
 
         // TODO remove useless properties from this object
         // remove null values from the bean
@@ -471,21 +466,12 @@ public class DAOImpl implements DAO {
 
     private String getDbColumn(String prop) {
 
-        String prop2 = "p:" + prop.toLowerCase();
-
-        // handle Column annotation; here new to 1.8.0 todo cache?
+        // handle Column annotation; here new to 1.8.0
         for (Field field : _bean.getClass().getDeclaredFields())
             if (field.getName().equalsIgnoreCase(prop) && field.isAnnotationPresent(Column.class))
                 return field.getAnnotation(Column.class).value();
 
-
-        return _colMap != null && _colMap.containsKey(prop2) ? _colMap.get(prop2) : prop;
-    }
-
-    private String getProp(String col) {
-
-        String col2 = "c:" + col.toLowerCase();
-        return _colMap != null && _colMap.containsKey(col2) ? _colMap.get(col2) : col;
+        return prop;
     }
 
     // initialize; setup primary keys

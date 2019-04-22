@@ -4,6 +4,7 @@ import com.github.jlynx.DAO;
 import com.github.jlynx.DAOImpl;
 import junit.framework.TestCase;
 
+import java.io.*;
 import java.sql.Date;
 import java.sql.SQLException;
 import java.sql.Timestamp;
@@ -13,15 +14,19 @@ import java.util.logging.Logger;
 
 public class DAOTest extends TestCase {
 
-    private PersonBean person = new PersonBean(1);
+    private PersonBean person;
     private PersonCompany personCompany = new PersonCompany();
     private DAO dao;
     private Logger logger = Logger.getLogger(DAO.class.getName());
+    private String ddl = "CREATE TABLE PERSON (PERSONID INT PRIMARY KEY, DOB DATE, MODTIME TIMESTAMP, " +
+            "RESUME CLOB, IMAGE BLOB, LASTNAME VARCHAR(30))";
+    private String h2 = "jdbc:h2:mem:jlynxdb";
 
     @Override
-    public void setUp() {
+    public void setUp() throws SQLException {
         dao = DAOImpl.newInstance("jdbc:hsqldb:mem:/jlynxdb", null);
-        assertNotNull(dao);
+        dao.executeSql(ddl, null);
+        person = new PersonBean(1);
         try {
             assertNotNull(dao.getConnection());
         } catch (SQLException e) {
@@ -30,14 +35,18 @@ public class DAOTest extends TestCase {
         }
     }
 
+    @Override
+    public void tearDown() throws SQLException {
+        dao.executeSql("DROP TABLE PERSON", null);
+    }
+
+
     public void test_CRUD() throws SQLException {
-        dao.executeSql("CREATE TABLE PERSON (PERSONID INT PRIMARY KEY, DOB DATE)", null);
         person.setDateOfBirth(Date.valueOf("2000-04-14"));
         dao.setBean(person);
         assertFalse(dao.select());
         assertEquals(dao.save(), 1);
         assertTrue(dao.delete());
-        dao.executeSql("ALTER TABLE PERSON ADD COLUMN LASTNAME VARCHAR(40)", null);
         person.setSurName("$#!@");
         dao.insert();
         dao.executeSql("CREATE TABLE PERSON_COMPANY (PID INT, CID INT, PRIMARY KEY (PID, CID))", null);
@@ -48,7 +57,6 @@ public class DAOTest extends TestCase {
         dao.delete();
 
         // 2nd part
-        dao.executeSql("ALTER TABLE PERSON ADD COLUMN MODTIME TIMESTAMP", null);
         person = new PersonBean(1);
         person.setSurName("&^$%@$%");
         person.setModified(new Timestamp(new java.util.Date().getTime()));
@@ -61,7 +69,8 @@ public class DAOTest extends TestCase {
         assertNotNull(person.getModified());
     }
 
-    public void test_InsertMany() throws SQLException {
+    @SuppressWarnings("unchecked")
+    public void test_List() throws SQLException, InstantiationException, IllegalAccessException {
         int i = 90;
         while (i < 105) {
             person = new PersonBean(++i);
@@ -70,13 +79,7 @@ public class DAOTest extends TestCase {
             person.setModified(new Timestamp(new java.util.Date().getTime()));
             dao.setBean(person);
             dao.insert();
-
         }
-        assertNotNull(dao.getConnection());
-    }
-
-    @SuppressWarnings("unchecked")
-    public void test_List() throws SQLException, InstantiationException, IllegalAccessException {
         java.util.List<PersonBean> list;
         try {
             list = (List<PersonBean>) dao.getList(Person.class, "select * from person", null);
@@ -88,8 +91,6 @@ public class DAOTest extends TestCase {
         }
 
         assertTrue(list.size() > 10);
-        dao.executeSql("ALTER TABLE PERSON ADD COLUMN RESUME CLOB", null);
-        dao.executeSql("ALTER TABLE PERSON ADD COLUMN IMAGE BLOB", null);
 
         for (PersonBean p : list) {
             int[] prefs = {1, 2};
@@ -103,19 +104,27 @@ public class DAOTest extends TestCase {
         }
     }
 
-    public void test_H2SQL() throws SQLException {
-        dao = DAOImpl.newInstance("jdbc:h2:mem:jlynxdb", null);
-        dao.executeSql("CREATE TABLE PERSON (PERSONID INT PRIMARY KEY, IMAGE BLOB, RESUME CLOB, LASTNAME VARCHAR(40))",
-                null);
-        person = new PersonBean(1005);
-        person.setSurName("$#!@#$#-#$!@$");
-        dao.setBean(person);
-        dao.save();
-        dao.delete();
-        dao.executeSql("DROP TABLE PERSON", null);
-    }
-
     public void test_LoggingLevel() {
         assertTrue(logger.isLoggable(Level.FINE));
+    }
+
+    public void test_BLOB() throws IOException, SQLException {
+        File file = new File("./test/resources/Creissels_et_Viaduct_de_Millau.jpg");
+        InputStream is = new FileInputStream(file);
+        dao.setBean(person);
+        dao.save();
+        dao.executeSql("UPDATE PERSON SET IMAGE = ? WHERE PERSONID = ?", new Object[]{is, person.getPersonId()});
+        person = new PersonBean(1);
+        assertNull(person.getImage());
+        dao.setBean(person);
+        dao.select();
+        assertNotNull(person.getImage());
+        is = (InputStream) person.getImage();
+        byte[] buffer = new byte[is.available()];
+        is.read(buffer);
+        Double x = 10000 * Math.random();
+        file = new File("/tmp/test_" + x.intValue() + ".jpg");
+        OutputStream outStream = new FileOutputStream(file);
+        outStream.write(buffer);
     }
 }
