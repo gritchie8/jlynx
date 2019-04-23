@@ -87,6 +87,30 @@ public class DAOTest extends TestCase {
             logger.fine(t.getMessage());
         }
 
+        // make sure bean is not null
+        Throwable t = null;
+        try {
+            dao.setBean(null).select();
+            fail();
+        } catch (RuntimeException e) {
+            t = e;
+            logger.info("Good!");
+        }
+        assertNotNull(t);
+
+        // make sure insert throws an exception
+        try {
+            t = null;
+            dao.setBean(new PersonBean(1));
+            dao.insert();
+            dao.insert();
+            fail();
+        } catch (SQLException e) {
+            t = e;
+            logger.info(e.getMessage());
+        }
+        assertNotNull(t);
+
 
     }
 

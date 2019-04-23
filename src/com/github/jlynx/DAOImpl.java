@@ -160,6 +160,9 @@ public class DAOImpl implements DAO {
 
     private synchronized String createFilterStmt() {
 
+        if (_bean == null)
+            throw new UnsupportedOperationException("Call #setBean() before performing database operations.");
+
         StringBuffer sql = new StringBuffer();
         final String and = " AND ";
         if (_keys == null) {
@@ -533,6 +536,7 @@ public class DAOImpl implements DAO {
 
         } catch (SQLException e) {
             logger.log(error, e.getMessage());
+            throw e;
         } finally {
             cleanup();
         }
