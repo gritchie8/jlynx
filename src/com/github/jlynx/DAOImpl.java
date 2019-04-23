@@ -276,8 +276,7 @@ public class DAOImpl implements DAO {
                 sql.append(")");
         }
 
-        String result = "INSERT INTO " + _entityName + " (" + StringUtil.fixNulls(sql.toString());
-        return result;
+        return "INSERT INTO " + _entityName + " (" + StringUtil.fixNulls(sql.toString());
     }
 
     private String createSelectStmt() {
@@ -381,10 +380,9 @@ public class DAOImpl implements DAO {
             throw new UnsupportedOperationException();
 
         connect();
-        String sql = null;
 
         try {
-            sql = "DELETE FROM " + _entityName + createFilterStmt();
+            String sql = "DELETE FROM " + _entityName + createFilterStmt();
             logger.log(debug, sql);
             _stmt = _conn.createStatement();
             int result = _stmt.executeUpdate(sql);
