@@ -97,7 +97,7 @@ public class DAOImpl implements DAO {
                     break;
                 }
 
-            BeanUtils.setValue(propName, object, value);
+            BeanUtil.setValue(propName, object, value);
 
         }// end for
 
@@ -174,7 +174,7 @@ public class DAOImpl implements DAO {
         for (String key : _keys) {
 
             sql.append(and).append(getDbColumn(key));
-            final Object partKeyValue = BeanUtils.getValue(key, _bean);
+            final Object partKeyValue = BeanUtil.getValue(key, _bean);
 
             if (partKeyValue == null) {
                 String message = "Primary key value empty for database column: " + key + ", object: " + _bean.getClass().getName();
@@ -193,7 +193,7 @@ public class DAOImpl implements DAO {
 
         StringBuffer sql = new StringBuffer();
 
-        Map<String, Object> props = BeanUtils.describe(_bean);
+        Map<String, Object> props = BeanUtil.describe(_bean);
         String delimiter;
         Object obj = _bean;
 
@@ -220,7 +220,7 @@ public class DAOImpl implements DAO {
                 // fix for configured column mappings
                 String end = ",$END-OF-COLUMN65$";
                 sql.append(end);
-                sql = new StringBuffer(StringUtils.replace(sql.toString(), end,
+                sql = new StringBuffer(StringUtil.replace(sql.toString(), end,
                         ""));
                 sql.append(") VALUES (");
             }
@@ -236,7 +236,7 @@ public class DAOImpl implements DAO {
 
             if (_dbVendor == SchemaUtil.ORACLE) {
                 // Oracle fix for Dates
-                if (java.sql.Timestamp.class.equals(BeanUtils.getType(fields[j], obj))) {
+                if (java.sql.Timestamp.class.equals(BeanUtil.getType(fields[j], obj))) {
                     oracleDate1 = "to_date(";
                     oracleDate2 = ",'yyyy-mm-dd hh24:mi:ss\".999\"')";
                 }
@@ -245,7 +245,7 @@ public class DAOImpl implements DAO {
             if (_dbVendor == SchemaUtil.MSSQL) {
 
                 // MSSQL fix for Bits/Boolean
-                Class<?> cls = BeanUtils.getType(fields[j], obj);
+                Class<?> cls = BeanUtil.getType(fields[j], obj);
 
                 if (Boolean.class.equals(cls)) {
 
@@ -262,12 +262,12 @@ public class DAOImpl implements DAO {
 
             }
 
-            Object field = BeanUtils.getValue(fields[j], obj);
+            Object field = BeanUtil.getValue(fields[j], obj);
             delimiter = (SchemaUtil.isNumber(field)) ? "" : "'";
 
             j++;
 
-            sql.append(oracleDate1).append(delimiter).append(StringUtils.escapeQuotes(val.toString()))
+            sql.append(oracleDate1).append(delimiter).append(StringUtil.escapeQuotes(val.toString()))
                     .append(delimiter).append(oracleDate2);
 
             if (i.hasNext())
@@ -276,7 +276,7 @@ public class DAOImpl implements DAO {
                 sql.append(")");
         }
 
-        String result = "INSERT INTO " + _entityName + " (" + StringUtils.fixNulls(sql.toString());
+        String result = "INSERT INTO " + _entityName + " (" + StringUtil.fixNulls(sql.toString());
         return result;
     }
 
@@ -292,7 +292,7 @@ public class DAOImpl implements DAO {
 
         String where = createFilterStmt();
 
-        Map<String, Object> map = new TreeMap<String, Object>(BeanUtils.describe(_bean));
+        Map<String, Object> map = new TreeMap<String, Object>(BeanUtil.describe(_bean));
         Set<String> remove = new HashSet<String>(_keys);
 
         for (String prop : remove)
@@ -307,7 +307,7 @@ public class DAOImpl implements DAO {
             Object oValue = map.get(colName);
 
             if (oValue != null) {
-                value = StringUtils.escapeQuotes(oValue.toString());
+                value = StringUtil.escapeQuotes(oValue.toString());
 
                 if (this._keys != null)
                     for (String key : _keys)
@@ -323,7 +323,7 @@ public class DAOImpl implements DAO {
                 if (_dbVendor == SchemaUtil.ORACLE) {
 
                     // Oracle fix for Dates
-                    Class<?> cls = BeanUtils.getType(colName, _bean);
+                    Class<?> cls = BeanUtil.getType(colName, _bean);
                     if (java.sql.Timestamp.class.equals(cls)) {
                         oracleDate1 = "to_date(";
                         oracleDate2 = ",'yyyy-mm-dd hh24:mi:ss\".999\"')";
@@ -333,12 +333,12 @@ public class DAOImpl implements DAO {
 
                 if (_dbVendor == SchemaUtil.MSSQL) {
 
-                    Class<?> cls = BeanUtils.getType(colName, _bean);
+                    Class<?> cls = BeanUtil.getType(colName, _bean);
 
                     // MSSQL fix for Bits/Boolean
                     if (Boolean.class.equals(cls)) {
 
-                        Boolean valB = (Boolean) BeanUtils.getValue(colName, _bean);
+                        Boolean valB = (Boolean) BeanUtil.getValue(colName, _bean);
 
                         if (valB == null)
                             value = null;
@@ -356,7 +356,7 @@ public class DAOImpl implements DAO {
                 }
 
                 // do fix here for DB2 numeric types
-                if (SchemaUtil.isNumber(BeanUtils.getValue(colName, _bean))) {
+                if (SchemaUtil.isNumber(BeanUtil.getValue(colName, _bean))) {
                     delimiter = "";
                 } else
                     delimiter = "'";
@@ -371,7 +371,7 @@ public class DAOImpl implements DAO {
 
         String sql2 = sql.toString().substring(0, sql.length() - 2) + where;
 
-        sql2 = StringUtils.fixNulls(sql2);
+        sql2 = StringUtil.fixNulls(sql2);
         return sql2;
     }
 

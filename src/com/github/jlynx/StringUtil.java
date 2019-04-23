@@ -3,7 +3,7 @@ package com.github.jlynx;
 /**
  * Utility class used internally by jLynx
  */
-final class StringUtils {
+final class StringUtil {
 
 
     static String escapeQuotes(String str) {

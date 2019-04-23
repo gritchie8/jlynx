@@ -17,11 +17,11 @@ import java.util.TreeSet;
 /**
  * Bean utils used by jLynx.
  */
-class BeanUtils {
+class BeanUtil {
 
     private static Map<Class<?>, Object[]> cache = new HashMap<Class<?>, Object[]>();
 
-    private BeanUtils() {
+    private BeanUtil() {
     }
 
     private static Date convertDate(String dtStr) {
