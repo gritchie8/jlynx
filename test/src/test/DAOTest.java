@@ -62,11 +62,32 @@ public class DAOTest extends TestCase {
         person.setModified(new Timestamp(new java.util.Date().getTime()));
         dao.setBean(person);
         assertEquals(dao.update(), 1);
+
         person = new PersonBean(1);
-        dao.setBean(person);
-        assertTrue(dao.select());
+        assertTrue(dao.setBean(person).select());
         assertNotNull(person.getSurName());
         assertNotNull(person.getModified());
+
+        // test exception is thrown
+        person = new PersonBean();
+        try {
+            dao.setBean(person).select();
+            fail();
+        } catch (Exception e) {
+            assertTrue("Should be a runtime exception", e instanceof RuntimeException);
+            person.setPersonId(777);
+            dao.save();
+        }
+
+        // try invalid object
+        try {
+            dao.setBean(new Person());
+            fail();
+        } catch (Throwable t) {
+            logger.fine(t.getMessage());
+        }
+
+
     }
 
     @SuppressWarnings("unchecked")

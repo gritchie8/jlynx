@@ -14,7 +14,7 @@ public class PersonBean {
         setPersonId(pid);
     }
 
-    // must have a public no-arg constructor for List and JSON features
+    // must have a public no-arg constructor for DAO#getList
     public PersonBean() {
     }
 

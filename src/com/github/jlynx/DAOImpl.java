@@ -9,6 +9,7 @@ import java.io.InputStream;
 import java.lang.reflect.Field;
 import java.sql.*;
 import java.util.*;
+import java.util.logging.Level;
 import java.util.logging.Logger;
 
 /**
@@ -19,8 +20,9 @@ import java.util.logging.Logger;
 public class DAOImpl implements DAO {
 
     private static Map<String, String> entityMap = new TreeMap<String, String>();
-    //private static Map<String, String> columns = new HashMap<String, String>();
     private static Logger logger = Logger.getLogger(DAO.class.getName());
+    private static Level debug = Level.FINE;
+    private static Level error = Level.SEVERE;
 
     private Object _bean;
     private Connection _conn;
@@ -37,7 +39,7 @@ public class DAOImpl implements DAO {
     private String _cnUrl;
 
     private DAOImpl() {
-        logger.fine("Creating");
+        logger.log(debug, "Creating instance");
     }
 
     /**
@@ -156,22 +158,29 @@ public class DAOImpl implements DAO {
         }
     }
 
-    private synchronized String createFilterStmt() throws SQLException {
+    private synchronized String createFilterStmt() {
 
         StringBuffer sql = new StringBuffer();
         final String and = " AND ";
-
-        Object obj = this._bean;
-        if (_keys == null)
-            initPK();
+        if (_keys == null) {
+            try {
+                initPK();
+            } catch (SQLException e) {
+                logger.log(error, e.getMessage());
+                throw new RuntimeException(e.getMessage());
+            }
+        }
 
         for (String key : _keys) {
 
             sql.append(and).append(getDbColumn(key));
-            final Object partKeyValue = BeanUtils.getValue(key, obj);
+            final Object partKeyValue = BeanUtils.getValue(key, _bean);
 
-            if (partKeyValue == null)
-                throw new SQLException("Primary Key value is missing! col=" + key + " " + obj);
+            if (partKeyValue == null) {
+                String message = "Primary key value empty for database column: " + key + ", object: " + _bean.getClass().getName();
+                logger.log(error, message);
+                throw new RuntimeException(message);
+            }
 
             String delimiter = SchemaUtil.isNumber(partKeyValue) ? "" : "'";
             sql.append(" = ").append(delimiter).append(partKeyValue.toString()).append(delimiter);
@@ -271,11 +280,11 @@ public class DAOImpl implements DAO {
         return result;
     }
 
-    private String createSelectStmt() throws SQLException {
+    private String createSelectStmt() {
         return "SELECT * FROM " + _entityName + createFilterStmt();
     }
 
-    private String createUpdateStmt() throws Exception {
+    private String createUpdateStmt() {
 
         String delimiter;
 
@@ -300,15 +309,10 @@ public class DAOImpl implements DAO {
             if (oValue != null) {
                 value = StringUtils.escapeQuotes(oValue.toString());
 
-                if (this._keys != null) {
-                    for (String key : _keys) {
+                if (this._keys != null)
+                    for (String key : _keys)
                         if (colName.equalsIgnoreCase(key))
                             value = null;
-                    }
-                } else
-                    throw new SQLException(
-                            "Primary key(s) is not set for the UPDATE query");
-
             }
 
             if (value != null) {
@@ -381,16 +385,13 @@ public class DAOImpl implements DAO {
 
         try {
             sql = "DELETE FROM " + _entityName + createFilterStmt();
-            logger.fine(sql);
+            logger.log(debug, sql);
             _stmt = _conn.createStatement();
             int result = _stmt.executeUpdate(sql);
             return result == 1;
-        } catch (Exception e) {
-            e.printStackTrace();
-            if (e instanceof SQLException) {
-                throw (SQLException) e;
-            } else
-                throw new SQLException(e.getMessage());
+        } catch (SQLException e) {
+            logger.log(error, e.getMessage());
+            throw e;
         } finally {
             cleanup();
         }
@@ -398,16 +399,19 @@ public class DAOImpl implements DAO {
 
     public boolean executeSql(String sql, Object[] p) throws SQLException {
 
-        boolean result;
-        connect();
-        logger.fine(sql);
-        _ps = _conn.prepareStatement(sql);
-        setParams(p);
-        result = _ps.execute();
-        if (_conn.getAutoCommit())
-            cleanup();
-
-        return result;
+        try {
+            connect();
+            logger.log(debug, sql);
+            _ps = _conn.prepareStatement(sql);
+            setParams(p);
+            return _ps.execute();
+        } catch (SQLException e) {
+            logger.log(error, e.getMessage());
+            throw e;
+        } finally {
+            if (_conn != null && _conn.getAutoCommit())
+                cleanup();
+        }
     }
 
     private List<?> executeQuery() throws SQLException {
@@ -447,7 +451,7 @@ public class DAOImpl implements DAO {
         _ps = this._conn.prepareStatement(sql);
         setParams(p);
         setClass(resultClass);
-        logger.fine(sql);
+        logger.log(debug, sql);
         return executeQuery();
     }
 
@@ -459,6 +463,8 @@ public class DAOImpl implements DAO {
         if (entityMap.containsKey(cls.getName()))
             _entityName = entityMap.get(cls.getName());
         else {
+            if (!cls.isAnnotationPresent(Table.class))
+                throw new RuntimeException(Table.class.getName() + " annotation missing from " + cls.getName());
             _entityName = cls.getAnnotation(Table.class).value();
             entityMap.put(cls.getName(), _entityName);
         }
@@ -481,6 +487,7 @@ public class DAOImpl implements DAO {
             try {
                 _keys = SchemaUtil.getPK(_conn, getEntity());
             } catch (SQLException e) {
+                logger.log(error, e.getMessage());
                 throw e;
             }
         }
@@ -492,32 +499,27 @@ public class DAOImpl implements DAO {
         if (_keys == null)
             initPK();
 
-        int result;
+        int result = -1;
         try {
             String sql = createInsertStmt();
             _stmt = _conn.createStatement();
-            logger.fine(sql);
+            logger.log(debug, sql);
             result = _stmt.executeUpdate(sql);
             if (_dbVendor == SchemaUtil.MSSQL && result == 1) {
-                try {
-                    int ident = 1;
-                    String identitySql = "SELECT SCOPE_IDENTITY()";
+                int ident = 0;
+                String identitySql = "SELECT SCOPE_IDENTITY()";
 
-                    _rs = _stmt.executeQuery(identitySql);
-                    if (_rs.next())
-                        ident = _rs.getInt(1);
+                _rs = _stmt.executeQuery(identitySql);
+                if (_rs.next())
+                    ident = _rs.getInt(1);
 
-                    result = ident;
-                } catch (Exception e) {
-                    result = 1;
-                }
+                result = ident;
+
             } else if (_dbVendor == SchemaUtil.MYSQL && result == 1) {
 
                 // use mysql last_insert_id() to return the auto_increment value
                 // if it returns 0, return 1 instead
-
                 String ident = "";
-
                 _rs = _stmt.executeQuery("select LAST_INSERT_ID() as ident");
                 if (_rs.next())
                     ident = _rs.getString(1);
@@ -532,7 +534,7 @@ public class DAOImpl implements DAO {
             }
 
         } catch (SQLException e) {
-            throw e;
+            logger.log(error, e.getMessage());
         } finally {
             cleanup();
         }
@@ -578,44 +580,27 @@ public class DAOImpl implements DAO {
     public int save() throws SQLException {
 
         connect();
-        int result = 0;
-
         if (!_conn.getAutoCommit()) {
-            throw new SQLException("save() not supported in transaction, use insert() or update() explicitly instead");
+            throw new SQLException("#save() not supported in transaction, use #insert() or #update() explicitly");
         } else {
-            String where;
             try {
-                where = createFilterStmt();
-            } catch (Exception e1) {
-                e1.printStackTrace();
-                result = insert();
-                return result;
-            }
-
-            ResultSet resultset = null;
-            try {
-
                 // 1. find out if object exists in DB first
                 // 2. if(exists) update else insert
                 StringBuffer select = new StringBuffer("SELECT ");
                 select.append(getDbColumn(_keys.iterator().next()));
-                select.append(" FROM ").append(getEntity()).append(where);
+                select.append(" FROM ").append(getEntity()).append(createFilterStmt());
                 String sql = select.toString();
-                logger.fine(sql);
+                logger.log(debug, sql);
                 _stmt = _conn.createStatement();
-                resultset = _stmt.executeQuery(sql);
-                boolean doUpdate = resultset.next();
-                result = doUpdate ? update() : insert();
+                _rs = _stmt.executeQuery(sql);
+                boolean doUpdate = _rs.next();
+                return doUpdate ? update() : insert();
 
-            } catch (Exception e) {
-                throw new SQLException(e.getMessage());
-            } finally {
-                if (resultset != null)
-                    resultset.close();
+            } catch (SQLException e) {
+                logger.log(error, e.getMessage());
+                throw e;
             }
         }
-
-        return result;
     }
 
     public void saveNulls(boolean updateNulls) {
@@ -630,7 +615,7 @@ public class DAOImpl implements DAO {
             boolean result;
             String sql = createSelectStmt();
             _stmt = _conn.createStatement();
-            logger.fine(sql);
+            logger.log(debug, sql);
             ResultSet resultset = _stmt.executeQuery(sql);
 
             if ((result = resultset.next()))
@@ -638,14 +623,9 @@ public class DAOImpl implements DAO {
 
             return result;
 
-        } catch (Exception e) {
-
-            e.printStackTrace();
-            if (e instanceof SQLException) {
-                throw (SQLException) e;
-            } else
-                throw new SQLException(e.getMessage());
-
+        } catch (SQLException e) {
+            logger.log(error, e.getMessage());
+            throw e;
         } finally {
             cleanup();
         }
@@ -657,7 +637,7 @@ public class DAOImpl implements DAO {
         try {
             initPK();
         } catch (SQLException e) {
-            e.printStackTrace();
+            logger.log(error, e.getMessage());
         }
         return this;
     }
@@ -684,17 +664,13 @@ public class DAOImpl implements DAO {
     public final int update() throws SQLException {
         connect();
         try {
-            int result;
             String sql = createUpdateStmt();
-            logger.fine(sql);
+            logger.log(debug, sql);
             _stmt = _conn.createStatement();
-            result = _stmt.executeUpdate(sql);
-            return result;
-        } catch (Exception e) {
-            if (e instanceof SQLException) {
-                throw (SQLException) e;
-            } else
-                throw new SQLException(e.getMessage());
+            return _stmt.executeUpdate(sql);
+        } catch (SQLException e) {
+            logger.log(error, e.getMessage());
+            throw e;
         } finally {
             cleanup();
         }
