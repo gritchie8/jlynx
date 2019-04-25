@@ -164,7 +164,7 @@ public class DAOTest extends TestCase {
     }
 
     public void test_BLOB() throws IOException, SQLException {
-        File file = new File("./test/resources/Creissels_et_Viaduct_de_Millau.jpg");
+        File file = new File("test/Creissels_et_Viaduct_de_Millau.jpg");
         InputStream is = new FileInputStream(file);
         dao.setBean(person);
         dao.save();
@@ -178,8 +178,9 @@ public class DAOTest extends TestCase {
         byte[] buffer = new byte[is.available()];
         is.read(buffer);
         Double x = 10000 * Math.random();
-        file = new File("/tmp/test_" + x.intValue() + ".jpg");
+        file = new File("./test_" + x.intValue() + ".jpg");
         OutputStream outStream = new FileOutputStream(file);
         outStream.write(buffer);
+        assertTrue(file.delete());
     }
 }
