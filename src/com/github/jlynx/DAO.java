@@ -1,6 +1,5 @@
 package com.github.jlynx;
 
-import java.io.Serializable;
 import java.sql.SQLException;
 import java.util.List;
 
@@ -11,7 +10,7 @@ import java.util.List;
  * @version 1.8.0
  * @since v1.0
  */
-public interface DAO extends Serializable {
+public interface DAO {
 
     /**
      * Deletes 1 row from a database.
@@ -47,7 +46,7 @@ public interface DAO extends Serializable {
      * @see java.sql.PreparedStatement#executeQuery()
      * @since v1.3
      */
-    List<?> getList(Class<?> resultClass, String query, Object[] params)
+    List getList(Class resultClass, String query, Object[] params)
             throws SQLException, IllegalAccessException, InstantiationException;
 
 

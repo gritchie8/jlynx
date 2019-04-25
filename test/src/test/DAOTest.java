@@ -111,6 +111,16 @@ public class DAOTest extends TestCase {
         }
         assertNotNull(t);
 
+        dao.getConnection().setReadOnly(true);
+        try {
+            DAOImpl.newInstance(dao.getConnection()).setBean(new PersonBean(401)).save();
+            fail();
+        } catch (SQLException e) {
+            logger.info(e.getMessage());
+        } finally {
+            dao.getConnection().setReadOnly(false);
+        }
+
 
     }
 

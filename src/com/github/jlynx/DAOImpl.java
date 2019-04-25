@@ -15,6 +15,7 @@ import java.util.logging.Logger;
 /**
  * Implementation of DAO interface.
  *
+ * @version 1.8.0
  * @see com.github.jlynx.DAO
  */
 public class DAOImpl implements DAO {
@@ -43,21 +44,33 @@ public class DAOImpl implements DAO {
     }
 
     /**
-     * Create a <code>com.github.jlynx.DAO</code> instance.
+     * Create a <code>com.github.jlynx.DAO</code> instance with an existing Connection.
      *
-     * @param databaseUrl     JDBC database connection String
-     * @param connectionProps JDBC properties
+     * @param connection JDBC database connection
      * @return DAO
      */
-    public static DAO newInstance(String databaseUrl, Properties connectionProps) {
+    public static DAO newInstance(Connection connection) {
         DAOImpl dao = new DAOImpl();
-        dao._cnUrl = databaseUrl;
-        dao._cnProps = connectionProps;
+        dao._conn = connection;
         return dao;
     }
 
     /**
-     * Create a <code>com.github.jlynx.DAO</code> instance.
+     * Create a <code>com.github.jlynx.DAO</code> instance with database URL and connection parameters.
+     *
+     * @param databaseUrl      JDBC database connection String
+     * @param connectionParams JDBC properties
+     * @return DAO
+     */
+    public static DAO newInstance(String databaseUrl, Properties connectionParams) {
+        DAOImpl dao = new DAOImpl();
+        dao._cnUrl = databaseUrl;
+        dao._cnProps = connectionParams;
+        return dao;
+    }
+
+    /**
+     * Create a <code>com.github.jlynx.DAO</code> instance with a DataSource name.
      *
      * @param dataSourceName JNDI
      * @return DAO
@@ -446,7 +459,7 @@ public class DAOImpl implements DAO {
 
     }
 
-    public List<?> getList(Class<?> resultClass, String sql, Object[] p)
+    public List getList(Class resultClass, String sql, Object[] p)
             throws SQLException, InstantiationException, IllegalAccessException {
         connect();
         _ps = this._conn.prepareStatement(sql);

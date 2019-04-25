@@ -3,6 +3,7 @@
 hs_err_pid*
 
 out/
+javadoc/
 /.idea
 
 *.class
