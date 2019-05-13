@@ -1,5 +1,8 @@
 import org.jetbrains.kotlin.gradle.tasks.KotlinCompile
 
+// jlynx version
+version = "1.8.0"
+
 plugins {
     // Apply the java-library plugin to add support for Java Library
     `java-library`
@@ -7,8 +10,6 @@ plugins {
 }
 
 repositories {
-    // Use jcenter for resolving your dependencies.
-    // You can declare any Maven/Ivy/file repository here.
     jcenter()
 }
 
@@ -38,5 +39,3 @@ compileTestKotlin.kotlinOptions {
     jvmTarget = "1.6"
 }
 
-// jlynx version
-version = "1.8.0"
