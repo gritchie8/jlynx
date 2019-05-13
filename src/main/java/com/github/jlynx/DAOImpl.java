@@ -21,7 +21,7 @@ import java.util.logging.Logger;
 public class DAOImpl implements DAO {
 
     private static Map<String, String> entityMap = new TreeMap<String, String>();
-    private static Logger logger = Logger.getLogger(DAO.class.getName());
+    private static Logger logger = Logger.getLogger(DAO.class.getPackage().getName());
     private static Level debug = Level.FINE;
     private static Level error = Level.SEVERE;
 

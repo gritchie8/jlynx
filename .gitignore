@@ -1,13 +1,9 @@
-# jlynx git ignore
-# virtual machine crash logs, see http://www.java.com/en/download/help/error_hotspot.xml
-hs_err_pid*
-
-out/
-javadoc/
+# Ignore Gradle project-specific cache directory
+/.gradle
 /.idea
 
-*.class
-*.DS_Store
-jlynx.iml
+# Ignore Gradle build output directory
+build
+gradle
 
-
+.DS_Store

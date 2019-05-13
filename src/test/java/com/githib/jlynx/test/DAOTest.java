@@ -1,4 +1,4 @@
-package test;
+package com.githib.jlynx.test;
 
 import com.github.jlynx.DAO;
 import com.github.jlynx.DAOImpl;
@@ -10,22 +10,28 @@ import java.sql.SQLException;
 import java.sql.Timestamp;
 import java.util.List;
 import java.util.logging.Level;
+import java.util.logging.LogManager;
 import java.util.logging.Logger;
 
 public class DAOTest extends TestCase {
 
+    String h2 = "jdbc:h2:mem:jlynxdb";
     private PersonBean person;
     private PersonCompany personCompany = new PersonCompany();
     private DAO dao;
-    private Logger logger = Logger.getLogger(DAO.class.getName());
+    private Logger logger;
     private String ddl = "CREATE TABLE PERSON (PERSONID INT PRIMARY KEY, DOB DATE, MODTIME TIMESTAMP, " +
             "RESUME CLOB, IMAGE BLOB, LASTNAME VARCHAR(30))";
-    private String h2 = "jdbc:h2:mem:jlynxdb";
 
     @Override
-    public void setUp() throws SQLException {
+    public void setUp() throws SQLException, IOException {
+
         dao = DAOImpl.newInstance("jdbc:hsqldb:mem:/jlynxdb", null);
         dao.executeSql(ddl, null);
+        logger = Logger.getLogger("com.github.jlynx");
+        InputStream inputStream = getClass().getResourceAsStream("/logging.properties");
+        LogManager.getLogManager().readConfiguration(inputStream);
+
         person = new PersonBean(1);
         try {
             assertNotNull(dao.getConnection());
@@ -33,11 +39,14 @@ public class DAOTest extends TestCase {
             e.printStackTrace();
             fail();
         }
+
+        logger.fine("#setUp - done");
     }
 
     @Override
     public void tearDown() throws SQLException {
-        dao.executeSql("DROP TABLE PERSON", null);
+        dao.executeSql("DROP TABLE IF EXISTS PERSON", null);
+        logger.fine("#tearDown - done");
     }
 
 
@@ -160,27 +169,29 @@ public class DAOTest extends TestCase {
     }
 
     public void test_LoggingLevel() {
-        assertTrue(logger.isLoggable(Level.FINE));
+        assertTrue(Logger.getLogger(DAO.class.getPackage().getName()).isLoggable(Level.FINE));
+        assertFalse(Logger.getLogger(DAO.class.getPackage().getName()).isLoggable(Level.FINER));
     }
 
     public void test_BLOB() throws IOException, SQLException {
-        File file = new File("test/Creissels_et_Viaduct_de_Millau.jpg");
-        InputStream is = new FileInputStream(file);
+        InputStream inputStream = getClass().getResourceAsStream("/Creissels_et_Viaduct_de_Millau.jpg");
         dao.setBean(person);
         dao.save();
-        dao.executeSql("UPDATE PERSON SET IMAGE = ? WHERE PERSONID = ?", new Object[]{is, person.getPersonId()});
+        dao.executeSql("UPDATE PERSON SET IMAGE = ? WHERE PERSONID = ?", new Object[]{inputStream, person.getPersonId()});
         person = new PersonBean(1);
         assertNull(person.getImage());
         dao.setBean(person);
         dao.select();
         assertNotNull(person.getImage());
-        is = (InputStream) person.getImage();
+        InputStream is = (InputStream) person.getImage();
         byte[] buffer = new byte[is.available()];
         is.read(buffer);
-        Double x = 10000 * Math.random();
-        file = new File("./test_" + x.intValue() + ".jpg");
+        int x = (int) (10000 * Math.random());
+        File file = new File("./test_" + x + ".jpg");
         OutputStream outStream = new FileOutputStream(file);
         outStream.write(buffer);
+        assertTrue(file.length() > 5000000);
         assertTrue(file.delete());
     }
+
 }

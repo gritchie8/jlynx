@@ -1,4 +1,4 @@
-package test;
+package com.githib.jlynx.test;
 
 import com.github.jlynx.Column;
 import com.github.jlynx.Table;
