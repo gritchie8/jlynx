@@ -1,7 +1,7 @@
 import org.jetbrains.kotlin.gradle.tasks.KotlinCompile
 
 // jlynx version
-version = "1.8.0"
+version = "1.8.1"
 
 plugins {
     // Apply the java-library plugin to add support for Java Library
@@ -25,8 +25,9 @@ dependencies {
     testImplementation(kotlin("stdlib-jdk8"))
 
     // jdbc drivers
-    testRuntime("com.h2database:h2:1.3.176")
+    //testRuntime("com.h2database:h2:1.3.176")
     testRuntime("org.hsqldb:hsqldb:2.4.1")
+    testRuntime("org.postgresql:postgresql:42.2.11")
 }
 
 val compileKotlin: KotlinCompile by tasks

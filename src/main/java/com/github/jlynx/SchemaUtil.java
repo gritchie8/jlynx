@@ -16,6 +16,7 @@ final class SchemaUtil {
     static final int MSSQL = 200;
     static final int MYSQL = 400;
     static final int ORACLE = 100;
+
     static java.util.Map<Integer, String> TYPE_MAPPINGS;
     private static Map<String, Set<String>> primaryKeys = new TreeMap<String, Set<String>>();
 

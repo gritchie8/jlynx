@@ -8,6 +8,7 @@ import java.io.*;
 import java.sql.Date;
 import java.sql.SQLException;
 import java.sql.Timestamp;
+import java.util.Calendar;
 import java.util.List;
 import java.util.logging.Level;
 import java.util.logging.LogManager;
@@ -15,12 +16,11 @@ import java.util.logging.Logger;
 
 public class DAOTest extends TestCase {
 
-    String h2 = "jdbc:h2:mem:jlynxdb";
     private PersonBean person;
     private PersonCompany personCompany = new PersonCompany();
     private DAO dao;
     private Logger logger;
-    private String ddl = "CREATE TABLE PERSON (PERSONID INT PRIMARY KEY, DOB DATE, MODTIME TIMESTAMP, " +
+    private String ddl = "CREATE TABLE PERSON (PERSONID INT IDENTITY PRIMARY KEY, DOB DATE, MODTIME TIMESTAMP, " +
             "RESUME CLOB, IMAGE BLOB, LASTNAME VARCHAR(30))";
 
     @Override
@@ -58,6 +58,17 @@ public class DAOTest extends TestCase {
         assertTrue(dao.delete());
         person.setSurName("$#!@");
         dao.insert();
+
+
+        PersonBean p2 = new PersonBean();
+        dao.setBean(p2);
+        Calendar cal = Calendar.getInstance();
+        cal.set(1982, 7, 1);
+        p2.setDateOfBirth(java.sql.Date.valueOf("1982-1-31"));
+        p2.setPersonId(dao.save());
+        assertTrue(p2.getPersonId() == 2);
+
+
         dao.executeSql("CREATE TABLE PERSON_COMPANY (PID INT, CID INT, PRIMARY KEY (PID, CID))", null);
         dao.setBean(personCompany);
         personCompany.setPersonId(person.getPersonId());
@@ -135,20 +146,23 @@ public class DAOTest extends TestCase {
 
     @SuppressWarnings("unchecked")
     public void test_List() throws SQLException, InstantiationException, IllegalAccessException {
-        int i = 90;
-        while (i < 105) {
-            person = new PersonBean(++i);
+        int i = 10;
+        while (i < 25) {
+            person = new PersonBean();
             person.setDateOfBirth(Date.valueOf("2010-01-01"));
             person.setSurName("P%$@#$%@# ------ " + i);
             person.setModified(new Timestamp(new java.util.Date().getTime()));
             dao.setBean(person);
-            dao.insert();
+            person.setPersonId(dao.insert());
+            logger.fine("personId = " + person.getPersonId());
+            i++;
         }
         java.util.List<PersonBean> list;
         try {
             list = (List<PersonBean>) dao.getList(Person.class, "select * from person", null);
             fail();
         } catch (Throwable ex) {
+            logger.log(Level.WARNING, ex.getMessage());
             assertTrue(ex instanceof IllegalArgumentException);
         } finally {
             list = (List<PersonBean>) dao.getList(PersonBean.class, "select * from person", null);

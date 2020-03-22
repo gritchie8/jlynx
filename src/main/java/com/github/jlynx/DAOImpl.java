@@ -183,7 +183,7 @@ public class DAOImpl implements DAO {
                 initPK();
             } catch (SQLException e) {
                 logger.log(error, e.getMessage());
-                throw new RuntimeException(e.getMessage());
+                throw new java.lang.IllegalArgumentException(e.getMessage());
             }
         }
 
@@ -194,8 +194,8 @@ public class DAOImpl implements DAO {
 
             if (partKeyValue == null) {
                 String message = "Primary key value empty for database column: " + key + ", object: " + _bean.getClass().getName();
-                logger.log(error, message);
-                throw new RuntimeException(message);
+                logger.warning(message);
+                throw new IllegalArgumentException(message);
             }
 
             String delimiter = SchemaUtil.isNumber(partKeyValue) ? "" : "'";
@@ -518,7 +518,7 @@ public class DAOImpl implements DAO {
             String sql = createInsertStmt();
             _stmt = _conn.createStatement();
             logger.log(debug, sql);
-            result = _stmt.executeUpdate(sql);
+            result = _stmt.executeUpdate(sql, Statement.RETURN_GENERATED_KEYS);
             if (_dbVendor == SchemaUtil.MSSQL && result == 1) {
                 int ident = 0;
                 String identitySql = "SELECT SCOPE_IDENTITY()";
@@ -545,6 +545,10 @@ public class DAOImpl implements DAO {
                 } catch (NumberFormatException e) {
                     //result = 1;
                 }
+            } else if (result == 1) {
+                ResultSet rs = _stmt.getGeneratedKeys();
+                if (rs.next())
+                    result = (int) rs.getLong(1);
             }
 
         } catch (SQLException e) {
@@ -614,6 +618,8 @@ public class DAOImpl implements DAO {
             } catch (SQLException e) {
                 logger.log(error, e.getMessage());
                 throw e;
+            } catch (IllegalArgumentException e) {
+                return insert();
             }
         }
     }
