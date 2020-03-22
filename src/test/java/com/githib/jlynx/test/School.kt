@@ -1,18 +1,18 @@
 package com.githib.jlynx.test
 
+import com.github.jlynx.Column
 import com.github.jlynx.Table
 
-@Table("T_SCHOOL")
-data class School(var id: Int) {
+@Table("t_school")
+class School() {
 
-    init {
-        println("#init School id = $id")
-    }
+    var id: Int? = null
 
-    constructor() : this(0)
+    var principal: String? = null
 
-    var Principal: String = ""
-    var Name: String = ""
-    var Address: String = "Not set"
+    var name: String = ""
+
+    @Column("address")
+    var address: String = "Not set"
 
 }

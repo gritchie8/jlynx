@@ -8,37 +8,68 @@ class DAOTestKT : junit.framework.TestCase() {
 
     var dao: DAO = DAOImpl.newInstance("jdbc:h2:mem:testdb", null)
 
-    init {
+    override fun setUp() {
         val inputStream = this.javaClass.getResourceAsStream("/logging.properties")
+        // presumes you have a postgres database created named 'test'
+        dao = DAOImpl.newInstance("jdbc:postgresql:test", null)
         LogManager.getLogManager().readConfiguration(inputStream)
-        dao.executeSql("CREATE TABLE T_SCHOOL (ID INT PRIMARY KEY, PRINCIPAL VARCHAR(50), NAME VARCHAR(30), ADDRESS VARCHAR(100))", null)
+        dao.executeSql("CREATE TABLE T_SCHOOL (id SERIAL PRIMARY KEY, principal VARCHAR(50)," +
+                " name VARCHAR(30), address VARCHAR(100))", null)
     }
 
-    fun test_CreateDelete() {
-        var school = School(1)
-        dao.setBean(school)
-        school.Name = "USC"
-        school.Principal = "Mrs. Smith"
-        school.Address = "LA, Cali"
-        assertTrue(school.id == 1)
-        dao.insert()
+    override fun tearDown() {
+        dao.executeSql("DROP TABLE T_SCHOOL", null);
+    }
 
-        school = school.copy()
-        school.id = 2
+    fun test1() {
+        var school = School()
         dao.setBean(school)
-        dao.save()
+        school.name = "USC"
+        school.principal = "Mrs. Smith"
+        school.address = "Los Angeles, CA"
+        assertTrue(school.id == null)
+        school.id = dao.insert()
 
-        val list = dao.getList(school.javaClass, "SELECT * FROM t_school", null)
-        assertTrue(list.size == 2)
-        list.forEach { c ->
-            println(c)
-            assertTrue(c is School)
-            println(c?.equals(school))
-            println(c == school)
+        for (x in 1001..1020) {
+            school = School()
+            school.address = "Address - $x"
+            dao.setBean(school)
+            school.id = dao.insert()
         }
 
-        school = School(2)
+        school.name = "Imperial College"
+        dao.save()
+        assertTrue(true)
+
+        for (x in 1015..1040) {
+            school = School()
+            school.address = "Address - $x"
+            dao.setBean(school)
+            school.id = dao.save()
+            assertTrue(x > 21)
+        }
+
+        val list = dao.getList(school.javaClass, "SELECT * FROM t_school", null)
+        assertTrue(list.size > 20)
+        list.forEach { c ->
+            println((c as School).address)
+            assertTrue(c is School)
+            assertFalse(c == school)
+        }
+
+        //school = School()
         assertTrue(dao.setBean(school).delete())
+    }
+
+    fun test2() {
+        var s = School()
+        s.address = "90 Bowery, New York, NY 10013"
+        dao.setBean(s)
+        assertTrue(dao.save() == 1)
+    }
+
+    fun test3() {
+        assertTrue(true)
     }
 
 }

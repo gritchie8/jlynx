@@ -9,6 +9,11 @@ jLynx RELEASE NOTES
 jLynx CHANGE LOG
 ----------------
 
+v1.8.1 (Mar-2020)
+
+  - added postgresql tests
+  - tweaked inserts to support generated keys (removed mysql specific code)
+
 v1.8.0 (Apr-2019)
 
   - fairly drastic cleanup and overhaul

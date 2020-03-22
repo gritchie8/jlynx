@@ -13,9 +13,9 @@ import java.util.TreeMap;
  */
 final class SchemaUtil {
 
-    static final int MSSQL = 200;
-    static final int MYSQL = 400;
     static final int ORACLE = 100;
+    static final int MSSQL = 200;
+
     static java.util.Map<Integer, String> TYPE_MAPPINGS;
     private static Map<String, Set<String>> primaryKeys = new TreeMap<String, Set<String>>();
 
@@ -54,9 +54,7 @@ final class SchemaUtil {
     static int findDbVendor(DatabaseMetaData dm) throws SQLException {
         String dbName = dm.getDatabaseProductName();
 
-        if ("MySQL".equalsIgnoreCase(dbName))
-            return MYSQL;
-        else if ("Microsoft SQL Server".equalsIgnoreCase(dbName))
+        if ("Microsoft SQL Server".equalsIgnoreCase(dbName))
             return MSSQL;
         else if ("Oracle".equalsIgnoreCase(dbName))
             return ORACLE;
