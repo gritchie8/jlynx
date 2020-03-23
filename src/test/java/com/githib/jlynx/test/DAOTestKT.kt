@@ -6,19 +6,24 @@ import java.util.logging.LogManager
 
 class DAOTestKT : junit.framework.TestCase() {
 
-    var dao: DAO = DAOImpl.newInstance("jdbc:h2:mem:testdb", null)
+    private val dao: DAO = DAOImpl.newInstance("jdbc:postgresql:test", null)
+    private val dao2: DAO = DAOImpl.newInstance("jdbc:mysql://localhost/jlynx_test?" +
+            "user=jlynx&password=passwd&serverTimezone=GMT", null)
 
     override fun setUp() {
         val inputStream = this.javaClass.getResourceAsStream("/logging.properties")
         // presumes you have a postgres database created named 'test'
-        dao = DAOImpl.newInstance("jdbc:postgresql:test", null)
         LogManager.getLogManager().readConfiguration(inputStream)
         dao.executeSql("CREATE TABLE T_SCHOOL (id SERIAL PRIMARY KEY, principal VARCHAR(50)," +
                 " name VARCHAR(30), address VARCHAR(100))", null)
+        dao2.executeSql("CREATE TABLE T_SCHOOL (id INT PRIMARY KEY AUTO_INCREMENT, name VARCHAR(30)," +
+                " address varchar(100), principal varchar(50))", null)
     }
 
     override fun tearDown() {
-        dao.executeSql("DROP TABLE T_SCHOOL", null);
+        val sql = "DROP TABLE T_SCHOOL"
+        dao.executeSql(sql, null);
+        dao2.executeSql(sql, null)
     }
 
     fun test1() {
@@ -70,6 +75,17 @@ class DAOTestKT : junit.framework.TestCase() {
 
     fun test3() {
         assertTrue(true)
+        for (x in 0..10) {
+            var s = School()
+            //s.id = x
+            dao2.setBean(s)
+            s.id = dao2.insert()
+            s.address = "${s.id} Main St"
+            dao2.update()
+            dao2.delete()
+            //println("ID = ${s.id}")
+        }
+
     }
 
 }
