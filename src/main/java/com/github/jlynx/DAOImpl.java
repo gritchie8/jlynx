@@ -501,7 +501,7 @@ public class DAOImpl implements DAO {
             try {
                 _keys = SchemaUtil.getPK(_conn, getEntity());
             } catch (SQLException e) {
-                logger.log(error, e.getMessage());
+                //logger.log(error, e.getMessage());
                 throw e;
             }
         }
@@ -510,8 +510,12 @@ public class DAOImpl implements DAO {
     public final int insert() throws SQLException {
 
         connect();
+        try {
         if (_keys == null)
             initPK();
+        } catch (SQLException sqle) {
+            logger.finest(sqle.getMessage());
+        }
 
         int result = -1;
         try {
@@ -642,7 +646,7 @@ public class DAOImpl implements DAO {
         try {
             initPK();
         } catch (SQLException e) {
-            logger.log(error, e.getMessage());
+            logger.fine(e.getMessage());
         }
         return this;
     }

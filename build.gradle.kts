@@ -6,7 +6,7 @@ version = "1.8.1"
 plugins {
     // Apply the java-library plugin to add support for Java Library
     `java-library`
-    kotlin("jvm") version "1.3.31"
+    kotlin("jvm") version "1.3.70"
 }
 
 repositories {
@@ -25,7 +25,7 @@ dependencies {
     testImplementation(kotlin("stdlib-jdk8"))
 
     // jdbc drivers
-    //testRuntime("com.h2database:h2:1.3.176")
+    testRuntime("com.h2database:h2:1.4.197")
     testRuntime("org.hsqldb:hsqldb:2.4.1")
     testRuntime("org.postgresql:postgresql:42.2.11")
     testRuntime("mysql:mysql-connector-java:8.0.11")

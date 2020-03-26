@@ -80,7 +80,7 @@ final class SchemaUtil {
             }
 
             if (pk == null)
-                throw new SQLException("Primary key expected for table: " + table);
+                throw new SQLException("Primary key missing for table: " + table);
 
             pks.remove("");
             pks.remove(null);

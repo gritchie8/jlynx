@@ -13,6 +13,7 @@ v1.8.1 (Mar-2020)
 
   - added postgresql tests
   - tweaked inserts to support generated keys (removed mysql specific code)
+  - insert() will not fail with a table that has no PK
 
 v1.8.0 (Apr-2019)
 
