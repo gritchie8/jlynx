@@ -1,0 +1,26 @@
+
+plugins {
+}
+
+apply plugin: 'java'
+apply plugin: 'idea'
+
+repositories {
+    jcenter()
+}
+
+dependencies {
+
+    testImplementation "junit:junit:4.13"
+
+    // jdbc drivers
+    //testRuntime("com.h2database:h2:1.4.197")
+    testRuntime "org.hsqldb:hsqldb:2.5.1"
+    runtime "com.microsoft.sqlserver:mssql-jdbc:8.3.1.jre8-preview"
+    //testRuntime("org.postgresql:postgresql:42.2.11")
+    //testRuntime("mysql:mysql-connector-java:8.0.11")
+}
+
+sourceCompatibility = '1.8'
+targetCompatibility = '1.8'
+version = "1.8.2" // jlynx version
