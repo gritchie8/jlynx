@@ -3,11 +3,16 @@ jLynx RELEASE NOTES
 
 1. Project hosted @ GitHub (2018).
 2. jLynx has no runtime dependencies. Logging is java.util.logging.
-3. jLynx requires JDK 1.5 and higher.
+3. jLynx requires JDK 1.8 and higher (Jul-2020).
 
 
 jLynx CHANGE LOG
 ----------------
+
+v1.8.2 (Jul-2020)
+
+  - cleaned up code
+  - switched up to JDK 1.8
 
 v1.8.1 (Mar-2020)
 

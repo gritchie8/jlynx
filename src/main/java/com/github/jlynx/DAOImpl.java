@@ -15,15 +15,14 @@ import java.util.logging.Logger;
 /**
  * Implementation of DAO interface.
  *
- * @version 1.8.0
  * @see com.github.jlynx.DAO
  */
 public class DAOImpl implements DAO {
 
     private static Map<String, String> entityMap = new TreeMap<String, String>();
-    private static Logger logger = Logger.getLogger(DAO.class.getPackage().getName());
-    private static Level debug = Level.FINE;
-    private static Level error = Level.SEVERE;
+    private static Logger logger = Logger.getLogger("jlynx");
+    private static Level debug = Level.FINER;
+    private static Level error = Level.WARNING;
 
     private Object _bean;
     private Connection _conn;
@@ -511,8 +510,8 @@ public class DAOImpl implements DAO {
 
         connect();
         try {
-        if (_keys == null)
-            initPK();
+            if (_keys == null)
+                initPK();
         } catch (SQLException sqle) {
             logger.finest(sqle.getMessage());
         }
