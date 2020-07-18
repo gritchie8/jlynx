@@ -10,6 +10,7 @@ import java.sql.SQLException;
 import java.sql.Timestamp;
 import java.util.Calendar;
 import java.util.List;
+import java.util.Properties;
 import java.util.logging.Level;
 import java.util.logging.LogManager;
 import java.util.logging.Logger;
@@ -169,6 +170,7 @@ public class DAOTest extends TestCase {
         }
 
         assertTrue(list.size() > 10);
+        assertTrue(true);
 
         for (PersonBean p : list) {
             int[] prefs = {1, 2};
