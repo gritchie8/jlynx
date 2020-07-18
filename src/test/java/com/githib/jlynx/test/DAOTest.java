@@ -183,8 +183,11 @@ public class DAOTest extends TestCase {
     }
 
     public void test_LoggingLevel() {
+        assertTrue(Logger.getLogger(DAO.class.getPackage().getName()).isLoggable(Level.SEVERE));
+        assertTrue(Logger.getLogger(DAO.class.getPackage().getName()).isLoggable(Level.INFO));
         assertTrue(Logger.getLogger(DAO.class.getPackage().getName()).isLoggable(Level.FINE));
         assertFalse(Logger.getLogger(DAO.class.getPackage().getName()).isLoggable(Level.FINER));
+        assertFalse(Logger.getLogger(DAO.class.getPackage().getName()).isLoggable(Level.FINEST));
     }
 
     public void test_BLOB() throws IOException, SQLException {
