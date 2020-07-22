@@ -151,9 +151,6 @@ class BeanUtil {
                 } catch (InvocationTargetException ex) {
                     warning = ex.getMessage();
                 }
-                if (warning != null)
-                    System.err.println(warning);
-
             }
         }
         return null;

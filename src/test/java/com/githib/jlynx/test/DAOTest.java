@@ -3,35 +3,36 @@ package com.githib.jlynx.test;
 import com.github.jlynx.DAO;
 import com.github.jlynx.DAOImpl;
 import junit.framework.TestCase;
+import org.slf4j.LoggerFactory;
 
 import java.io.*;
 import java.sql.Date;
 import java.sql.SQLException;
 import java.sql.Timestamp;
+import java.util.ArrayList;
 import java.util.Calendar;
 import java.util.List;
-import java.util.Properties;
-import java.util.logging.Level;
-import java.util.logging.LogManager;
-import java.util.logging.Logger;
 
 public class DAOTest extends TestCase {
 
     private PersonBean person;
     private PersonCompany personCompany = new PersonCompany();
     private DAO dao;
-    private Logger logger;
-    private String ddl = "CREATE TABLE PERSON (PERSONID INT IDENTITY PRIMARY KEY, DOB DATE, MODTIME TIMESTAMP, " +
-            "RESUME CLOB, IMAGE BLOB, LASTNAME VARCHAR(30))";
+    private String ddl = "CREATE TABLE PERSON (PERSONID INT IDENTITY PRIMARY KEY," +
+            " DOB DATE, MODTIME TIMESTAMP," +
+            " RESUME CLOB, IMAGE BLOB," +
+            " LASTNAME VARCHAR(30))";
+
+
+    public DAOTest() {
+    }
 
     @Override
     public void setUp() throws SQLException, IOException {
 
         dao = DAOImpl.newInstance("jdbc:hsqldb:mem:/jlynxdb", null);
         dao.executeSql(ddl, null);
-        logger = Logger.getLogger("com.github.jlynx");
-        InputStream inputStream = getClass().getResourceAsStream("/logging.properties");
-        LogManager.getLogManager().readConfiguration(inputStream);
+        LoggerFactory.getLogger(getClass()).info("Testing");
 
         person = new PersonBean(1);
         try {
@@ -40,18 +41,16 @@ public class DAOTest extends TestCase {
             e.printStackTrace();
             fail();
         }
-
-        logger.fine("#setUp - done");
     }
 
     @Override
     public void tearDown() throws SQLException {
         dao.executeSql("DROP TABLE IF EXISTS PERSON", null);
-        logger.fine("#tearDown - done");
     }
 
 
     public void test_CRUD() throws SQLException {
+        LoggerFactory.getLogger(getClass()).info("Starting");
         person.setDateOfBirth(Date.valueOf("2000-04-14"));
         dao.setBean(person);
         assertFalse(dao.select());
@@ -66,7 +65,7 @@ public class DAOTest extends TestCase {
         Calendar cal = Calendar.getInstance();
         cal.set(1982, 7, 1);
         p2.setDateOfBirth(java.sql.Date.valueOf("1982-1-31"));
-        p2.setPersonId(dao.save());
+        p2.setPersonId((int) dao.save());
         assertTrue(p2.getPersonId() == 2);
 
 
@@ -105,7 +104,7 @@ public class DAOTest extends TestCase {
             dao.setBean(new Person());
             fail();
         } catch (Throwable t) {
-            logger.fine(t.getMessage());
+            //t.printStackTrace();
         }
 
         // make sure bean is not null
@@ -115,7 +114,6 @@ public class DAOTest extends TestCase {
             fail();
         } catch (RuntimeException e) {
             t = e;
-            logger.info("Good!");
         }
         assertNotNull(t);
 
@@ -128,7 +126,6 @@ public class DAOTest extends TestCase {
             fail();
         } catch (SQLException e) {
             t = e;
-            logger.info(e.getMessage());
         }
         assertNotNull(t);
 
@@ -137,34 +134,33 @@ public class DAOTest extends TestCase {
             DAOImpl.newInstance(dao.getConnection()).setBean(new PersonBean(401)).save();
             fail();
         } catch (SQLException e) {
-            logger.info(e.getMessage());
         } finally {
             dao.getConnection().setReadOnly(false);
         }
 
-
+        LoggerFactory.getLogger(getClass()).info("Done");
     }
 
     @SuppressWarnings("unchecked")
     public void test_List() throws SQLException, InstantiationException, IllegalAccessException {
-        int i = 10;
+        int i = 0;
         while (i < 25) {
             person = new PersonBean();
             person.setDateOfBirth(Date.valueOf("2010-01-01"));
             person.setSurName("P%$@#$%@# ------ " + i);
             person.setModified(new Timestamp(new java.util.Date().getTime()));
             dao.setBean(person);
-            person.setPersonId(dao.insert());
-            logger.fine("personId = " + person.getPersonId());
+            long insert = dao.insert();
+            assertTrue(i == person.getPersonId());
             i++;
         }
-        java.util.List<PersonBean> list;
+        java.util.List<PersonBean> list = new ArrayList<PersonBean>();
         try {
             list = (List<PersonBean>) dao.getList(Person.class, "select * from person", null);
             fail();
         } catch (Throwable ex) {
-            logger.log(Level.WARNING, ex.getMessage());
             assertTrue(ex instanceof IllegalArgumentException);
+            assertTrue(list.isEmpty());
         } finally {
             list = (List<PersonBean>) dao.getList(PersonBean.class, "select * from person", null);
         }
@@ -182,14 +178,6 @@ public class DAOTest extends TestCase {
             dao.update();
             assertTrue(dao.delete());
         }
-    }
-
-    public void test_LoggingLevel() {
-        assertTrue(Logger.getLogger(DAO.class.getPackage().getName()).isLoggable(Level.SEVERE));
-        assertTrue(Logger.getLogger(DAO.class.getPackage().getName()).isLoggable(Level.INFO));
-        assertTrue(Logger.getLogger(DAO.class.getPackage().getName()).isLoggable(Level.FINE));
-        assertFalse(Logger.getLogger(DAO.class.getPackage().getName()).isLoggable(Level.FINER));
-        assertFalse(Logger.getLogger(DAO.class.getPackage().getName()).isLoggable(Level.FINEST));
     }
 
     public void test_BLOB() throws IOException, SQLException {

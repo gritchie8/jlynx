@@ -10,8 +10,8 @@ import java.util.List;
 @Table("PERSON")
 public class PersonBean {
 
-    public PersonBean(int pid) {
-        setPersonId(pid);
+    public PersonBean(long pid) {
+        this.personId = (int) pid;
     }
 
     // must have a public no-arg constructor for DAO#getList

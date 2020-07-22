@@ -53,12 +53,11 @@ public interface DAO {
     /**
      * Inserts 1 row into a database.
      *
-     * @return int No. of rows inserted -- or -- ID of record inserted (MySQL
-     * and Microsoft SQL Server only)
+     * @return long No. of rows inserted should be 1 -- or -- ID of record inserted
      * @throws SQLException - database exception
      * @since v1.0
      */
-    int insert() throws SQLException;
+    long insert() throws SQLException;
 
     /**
      * Saves POJO to database; equivalent to <code>update()</code> if record
@@ -68,7 +67,7 @@ public interface DAO {
      * @return int
      * @throws SQLException - database exception
      */
-    int save() throws SQLException;
+    long save() throws SQLException;
 
     /**
      * Whether <code>null</code> should be preserved in UPDATE and INSERT

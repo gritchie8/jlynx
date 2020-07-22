@@ -9,11 +9,18 @@ repositories {
 
 dependencies {
 
+    // added Jul-2020
+    implementation "org.slf4j:slf4j-api:1.7.30"
+
+    //testRuntime "org.slf4j:slf4j-simple:1.7.30"
+    testRuntime 'org.apache.logging.log4j:log4j-slf4j-impl:2.13.3'
+
     testImplementation "junit:junit:4.13"
 
     // jdbc drivers
-    //testRuntime("com.h2database:h2:1.4.197")
     testRuntime "org.hsqldb:hsqldb:2.5.1"
+
+    //testRuntime("com.h2database:h2:1.4.197")
     //testRuntime "com.microsoft.sqlserver:mssql-jdbc:8.3.1.jre8-preview"
     //testRuntime("org.postgresql:postgresql:42.2.11")
     //testRuntime("mysql:mysql-connector-java:8.0.11")
@@ -21,4 +28,4 @@ dependencies {
 
 sourceCompatibility = '1.8'
 targetCompatibility = '1.8'
-version = "1.8.2" // jlynx version
+version = "1.9.0-SNAPSHOT" // jlynx version

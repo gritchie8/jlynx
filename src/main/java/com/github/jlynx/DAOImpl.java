@@ -1,5 +1,8 @@
 package com.github.jlynx;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 import javax.naming.Context;
 import javax.naming.InitialContext;
 import javax.naming.NamingException;
@@ -9,8 +12,6 @@ import java.io.InputStream;
 import java.lang.reflect.Field;
 import java.sql.*;
 import java.util.*;
-import java.util.logging.Level;
-import java.util.logging.Logger;
 
 /**
  * Implementation of DAO interface.
@@ -19,10 +20,8 @@ import java.util.logging.Logger;
  */
 public class DAOImpl implements DAO {
 
-    private static Map<String, String> entityMap = new TreeMap<String, String>();
-    private static Logger logger = Logger.getLogger("jlynx");
-    private static Level debug = Level.FINER;
-    private static Level error = Level.WARNING;
+    private final static Map<String, String> entityMap = new TreeMap<>();
+    private final static Logger _logger = LoggerFactory.getLogger(DAOImpl.class);
 
     private Object _bean;
     private Connection _conn;
@@ -39,7 +38,8 @@ public class DAOImpl implements DAO {
     private String _cnUrl;
 
     private DAOImpl() {
-        logger.log(debug, "Creating instance");
+        if (_logger.isTraceEnabled())
+            _logger.trace("#DAOImpl - creating new instance");
     }
 
     /**
@@ -181,7 +181,6 @@ public class DAOImpl implements DAO {
             try {
                 initPK();
             } catch (SQLException e) {
-                logger.log(error, e.getMessage());
                 throw new java.lang.IllegalArgumentException(e.getMessage());
             }
         }
@@ -193,7 +192,6 @@ public class DAOImpl implements DAO {
 
             if (partKeyValue == null) {
                 String message = "Primary key value empty for database column: " + key + ", object: " + _bean.getClass().getName();
-                logger.warning(message);
                 throw new IllegalArgumentException(message);
             }
 
@@ -291,11 +289,17 @@ public class DAOImpl implements DAO {
                 sql.append(")");
         }
 
-        return "INSERT INTO " + _entityName + " (" + StringUtil.fixNulls(sql.toString());
+        String stmt = "INSERT INTO " + _entityName + " (" + StringUtil.fixNulls(sql.toString());
+        if (_logger.isDebugEnabled())
+            _logger.debug("#insert - " + stmt);
+        return stmt;
     }
 
     private String createSelectStmt() {
-        return "SELECT * FROM " + _entityName + createFilterStmt();
+        String stmt = "SELECT * FROM " + _entityName + createFilterStmt();
+        if (_logger.isDebugEnabled())
+            _logger.debug("#select - " + stmt);
+        return stmt;
     }
 
     private String createUpdateStmt() {
@@ -398,12 +402,12 @@ public class DAOImpl implements DAO {
 
         try {
             String sql = "DELETE FROM " + _entityName + createFilterStmt();
-            logger.log(debug, sql);
+            if (_logger.isDebugEnabled())
+                _logger.debug("#delete - " + sql);
             _stmt = _conn.createStatement();
             int result = _stmt.executeUpdate(sql);
             return result == 1;
         } catch (SQLException e) {
-            logger.log(error, e.getMessage());
             throw e;
         } finally {
             cleanup();
@@ -414,12 +418,10 @@ public class DAOImpl implements DAO {
 
         try {
             connect();
-            logger.log(debug, sql);
             _ps = _conn.prepareStatement(sql);
             setParams(p);
             return _ps.execute();
         } catch (SQLException e) {
-            logger.log(error, e.getMessage());
             throw e;
         } finally {
             if (_conn != null && _conn.getAutoCommit())
@@ -464,7 +466,6 @@ public class DAOImpl implements DAO {
         _ps = this._conn.prepareStatement(sql);
         setParams(p);
         setClass(resultClass);
-        logger.log(debug, sql);
         return executeQuery();
     }
 
@@ -506,40 +507,52 @@ public class DAOImpl implements DAO {
         }
     }
 
-    public final int insert() throws SQLException {
+    public final long insert() throws SQLException {
 
         connect();
         try {
             if (_keys == null)
                 initPK();
         } catch (SQLException sqle) {
-            logger.finest(sqle.getMessage());
+            _logger.warn(sqle.getMessage());
         }
 
-        int result = -1;
+        long result;
         try {
             String sql = createInsertStmt();
             _stmt = _conn.createStatement();
-            logger.log(debug, sql);
-            result = _stmt.executeUpdate(sql, Statement.RETURN_GENERATED_KEYS);
-            if (_dbVendor == SchemaUtil.MSSQL && result == 1) {
-                int ident = 0;
-                String identitySql = "SELECT SCOPE_IDENTITY()";
+            boolean supportsGetGeneratedKeys = _conn.getMetaData().supportsGetGeneratedKeys();
+            String pk = null;
+            if (supportsGetGeneratedKeys) {
+                if (_keys.size() == 1 && _dbVendor != SchemaUtil.MSSQL) {
+                    pk = _keys.iterator().next();
+                    result = _stmt.executeUpdate(sql, new String[]{pk});
+                } else
+                    result = _stmt.executeUpdate(sql, Statement.RETURN_GENERATED_KEYS);
+            } else
+                result = _stmt.executeUpdate(sql);
 
-                _rs = _stmt.executeQuery(identitySql);
-                if (_rs.next())
-                    ident = _rs.getInt(1);
+            if (result == 1 && supportsGetGeneratedKeys) {
+                _rs = _stmt.getGeneratedKeys();
+                if (_rs.next()) {
+                    try {
+                        result = _rs.getLong(1);
+                        if (pk != null) {
+                            if (_logger.isTraceEnabled())
+                                _logger.trace("#insert - attempting to set identity value " + pk + " = " + result);
+                            BeanUtil.setValue(_keys.iterator().next(), _bean, result); // Long
+                            if (BeanUtil.getValue(pk, _bean) == null)
+                                BeanUtil.setValue(_keys.iterator().next(), _bean, (int) result); // Integer
+                        }
 
-                result = ident;
-
-            } else if (result == 1) {
-                ResultSet rs = _stmt.getGeneratedKeys();
-                if (rs.next())
-                    result = (int) rs.getLong(1);
+                    } catch (Throwable throwable) {
+                        _logger.warn("#insert - AutoGenerated key not working - " + throwable.getMessage());
+                    }
+                }
             }
 
         } catch (SQLException e) {
-            logger.log(error, e.getMessage());
+            //logger.log(error, e.getMessage());
             throw e;
         } finally {
             cleanup();
@@ -583,7 +596,7 @@ public class DAOImpl implements DAO {
 
     }
 
-    public int save() throws SQLException {
+    public long save() throws SQLException {
 
         connect();
         if (!_conn.getAutoCommit()) {
@@ -596,14 +609,16 @@ public class DAOImpl implements DAO {
                 select.append(getDbColumn(_keys.iterator().next()));
                 select.append(" FROM ").append(getEntity()).append(createFilterStmt());
                 String sql = select.toString();
-                logger.log(debug, sql);
                 _stmt = _conn.createStatement();
                 _rs = _stmt.executeQuery(sql);
                 boolean doUpdate = _rs.next();
+                if (doUpdate)
+                    _logger.trace("#save - updating existing record " + sql);
+                else
+                    _logger.trace("#save - insert new record " + sql);
                 return doUpdate ? update() : insert();
 
             } catch (SQLException e) {
-                logger.log(error, e.getMessage());
                 throw e;
             } catch (IllegalArgumentException e) {
                 return insert();
@@ -623,7 +638,8 @@ public class DAOImpl implements DAO {
             boolean result;
             String sql = createSelectStmt();
             _stmt = _conn.createStatement();
-            logger.log(debug, sql);
+            if (_logger.isDebugEnabled())
+                _logger.debug("#update - " + sql);
             ResultSet resultset = _stmt.executeQuery(sql);
 
             if ((result = resultset.next()))
@@ -632,7 +648,7 @@ public class DAOImpl implements DAO {
             return result;
 
         } catch (SQLException e) {
-            logger.log(error, e.getMessage());
+            //logger.log(error, e.getMessage());
             throw e;
         } finally {
             cleanup();
@@ -645,7 +661,7 @@ public class DAOImpl implements DAO {
         try {
             initPK();
         } catch (SQLException e) {
-            logger.fine(e.getMessage());
+            //logger.fine(e.getMessage());
         }
         return this;
     }
@@ -673,11 +689,11 @@ public class DAOImpl implements DAO {
         connect();
         try {
             String sql = createUpdateStmt();
-            logger.log(debug, sql);
             _stmt = _conn.createStatement();
+            if (_logger.isDebugEnabled())
+                _logger.debug("#update - " + sql);
             return _stmt.executeUpdate(sql);
         } catch (SQLException e) {
-            logger.log(error, e.getMessage());
             throw e;
         } finally {
             cleanup();
