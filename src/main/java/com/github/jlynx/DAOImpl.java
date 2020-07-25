@@ -83,22 +83,52 @@ public class DAOImpl implements DAO {
     // pre-condition: ResultSet next() called
     private void setValues(ResultSet rs, Object object) throws SQLException {
 
-        int colCount = rs.getMetaData().getColumnCount();
-        for (int i = 1; i <= colCount; i++) {
+        for (int colIndex = 1; colIndex <= rs.getMetaData().getColumnCount(); colIndex++) {
 
-            String colName = rs.getMetaData().getColumnName(i);
+            String colName = rs.getMetaData().getColumnName(colIndex);
             Object value;
             String propName = colName;
-            int type = rs.getMetaData().getColumnType(i);
-            if (type == Types.BLOB || type == Types.BINARY || type == Types.LONGVARBINARY) {
-                value = rs.getBlob(i);
-                if (value != null)
-                    value = ((Blob) value).getBinaryStream();
+            int type = rs.getMetaData().getColumnType(colIndex);
 
-            } else if (type == Types.VARCHAR || type == Types.CLOB || type == Types.LONGVARCHAR) {
-                value = rs.getString(i);
-            } else
-                value = rs.getObject(i);
+            switch (type) {
+                case Types.BLOB:
+                case Types.VARBINARY:
+                case Types.LONGVARBINARY:
+                    value = rs.getBlob(colIndex);
+                    if (value != null)
+                        value = ((Blob) value).getBinaryStream();
+                    break;
+                case Types.VARCHAR:
+                case Types.CHAR:
+                case Types.CLOB:
+                case Types.LONGVARCHAR:
+                case Types.NVARCHAR:
+                case Types.LONGNVARCHAR:
+                    value = rs.getString(colIndex);
+                    break;
+                case Types.TIMESTAMP:
+                case Types.TIMESTAMP_WITH_TIMEZONE:
+                    value = rs.getTimestamp(colIndex);
+                    break;
+                case Types.DATE:
+                    value = rs.getDate(colIndex);
+                    break;
+                case Types.INTEGER:
+                case Types.TINYINT:
+                case Types.BIGINT:
+                case Types.SMALLINT:
+                    value = rs.getInt(colIndex);
+                    break;
+                case Types.NUMERIC:
+                case Types.DECIMAL:
+                    value = rs.getBigDecimal(colIndex);
+                    break;
+                case Types.FLOAT:
+                    value = rs.getFloat(colIndex);
+                    break;
+                default:
+                    value = rs.getObject(colIndex);
+            }
 
             if (!entityMap.containsKey(object.getClass().getName()) && object.getClass().isAnnotationPresent(Table.class))
                 entityMap.put(object.getClass().getCanonicalName(), object.getClass().getAnnotation(Table.class).value());
@@ -111,7 +141,7 @@ public class DAOImpl implements DAO {
 
             BeanUtil.setValue(propName, object, value);
 
-        }// end for
+        } // end for-loop of
 
 
     }
@@ -210,8 +240,9 @@ public class DAOImpl implements DAO {
         String delimiter;
         Object obj = _bean;
 
-        // TODO remove transient properties from this object
         removeNulls(props);
+        if (props.isEmpty())
+            return "INSERT INTO " + _entityName + " DEFAULT VALUES";
 
         String[] fields = new String[props.size()];
         int j = 0;
@@ -226,7 +257,7 @@ public class DAOImpl implements DAO {
                     break;
                 }
 
-            sql.append(getDbColumn(column == null ? prop : column));
+            sql.append(getDbColumn(column == null ? prop.toUpperCase() : column));
             if (j < fields.length)
                 sql.append(",");
             else {
@@ -304,34 +335,35 @@ public class DAOImpl implements DAO {
 
     private String createUpdateStmt() {
 
-        String delimiter;
-
         StringBuffer sql = new StringBuffer("UPDATE ").append(_entityName).append(" SET ");
 
         String where = createFilterStmt();
 
-        Map<String, Object> map = new TreeMap<String, Object>(BeanUtil.describe(_bean));
-        Set<String> remove = new HashSet<String>(_keys);
+        Map<String, Object> map = new TreeMap<>(BeanUtil.describe(_bean));
+
+        Set<String> remove = new HashSet<>(_keys);
+
+        for (String prop : map.keySet())
+            for (String pk : _keys)
+                if (pk.equalsIgnoreCase(prop))
+                    remove.add(prop);
 
         for (String prop : remove)
             map.remove(prop);
 
-        // TODO remove useless properties from this object
         // remove null values from the bean
         removeNulls(map);
+
+        if (map.isEmpty())
+            throw new RuntimeException("No values to update for " + _bean.toString());
 
         for (String colName : map.keySet()) {
             String value = null;
             Object oValue = map.get(colName);
 
-            if (oValue != null) {
+            if (oValue != null)
                 value = StringUtil.escapeQuotes(oValue.toString());
 
-                if (this._keys != null)
-                    for (String key : _keys)
-                        if (colName.equalsIgnoreCase(key))
-                            value = null;
-            }
 
             if (value != null) {
 
@@ -374,12 +406,13 @@ public class DAOImpl implements DAO {
                 }
 
                 // do fix here for DB2 numeric types
+                String delimiter;
                 if (SchemaUtil.isNumber(BeanUtil.getValue(colName, _bean))) {
                     delimiter = "";
                 } else
                     delimiter = "'";
 
-                sql.append(getDbColumn(colName)).append("=").append(oracleDate1).append(delimiter)
+                sql.append(getDbColumn(colName)).append(" = ").append(oracleDate1).append(delimiter)
                         .append(value).append(delimiter).append(oracleDate2);
 
                 sql.append(", ");
@@ -394,9 +427,6 @@ public class DAOImpl implements DAO {
     }
 
     public final boolean delete() throws SQLException {
-
-        if (_bean instanceof Map)
-            throw new UnsupportedOperationException();
 
         connect();
 
@@ -460,7 +490,7 @@ public class DAOImpl implements DAO {
 
     }
 
-    public List getList(Class resultClass, String sql, Object[] p)
+    public List<?> getList(Class<?> resultClass, String sql, Object[] p)
             throws SQLException, InstantiationException, IllegalAccessException {
         connect();
         _ps = this._conn.prepareStatement(sql);
@@ -491,23 +521,19 @@ public class DAOImpl implements DAO {
             if (field.getName().equalsIgnoreCase(prop) && field.isAnnotationPresent(Column.class))
                 return field.getAnnotation(Column.class).value();
 
-        return prop;
+        return prop.toUpperCase();
     }
 
     // initialize; setup primary keys
     private void initPK() throws SQLException {
         _keys = null;
-        if (_conn != null && getEntity() != null) {
-            try {
-                _keys = SchemaUtil.getPK(_conn, getEntity());
-            } catch (SQLException e) {
-                //logger.log(error, e.getMessage());
-                throw e;
-            }
-        }
+        if (getEntity() != null)
+            _keys = SchemaUtil.getPK(_conn, getEntity());
+        else
+            _logger.warn("Call DAO#setBean() first");
     }
 
-    public final long insert() throws SQLException {
+    public final void insert() throws SQLException {
 
         connect();
         try {
@@ -520,6 +546,7 @@ public class DAOImpl implements DAO {
         long result;
         try {
             String sql = createInsertStmt();
+            _logger.debug("#insert - " + sql);
             _stmt = _conn.createStatement();
             boolean supportsGetGeneratedKeys = _conn.getMetaData().supportsGetGeneratedKeys();
             String pk = null;
@@ -533,21 +560,15 @@ public class DAOImpl implements DAO {
                 result = _stmt.executeUpdate(sql);
 
             if (result == 1 && supportsGetGeneratedKeys) {
+
                 _rs = _stmt.getGeneratedKeys();
                 if (_rs.next()) {
-                    try {
-                        result = _rs.getLong(1);
-                        if (pk != null) {
-                            if (_logger.isTraceEnabled())
-                                _logger.trace("#insert - attempting to set identity value " + pk + " = " + result);
-                            BeanUtil.setValue(_keys.iterator().next(), _bean, result); // Long
-                            if (BeanUtil.getValue(pk, _bean) == null)
-                                BeanUtil.setValue(_keys.iterator().next(), _bean, (int) result); // Integer
-                        }
 
-                    } catch (Throwable throwable) {
-                        _logger.warn("#insert - AutoGenerated key not working - " + throwable.getMessage());
-                    }
+                    final String pkProperty = _keys.iterator().next();
+                    if (_logger.isTraceEnabled())
+                        _logger.trace("#insert - attempting to set identity value " + pk + " = " + result);
+                    BeanUtil.setValue(pkProperty, _bean, null);
+                    BeanUtil.setValue(pkProperty, _bean, _rs.getObject(1));
                 }
             }
 
@@ -557,7 +578,7 @@ public class DAOImpl implements DAO {
         } finally {
             cleanup();
         }
-        return result;
+        //return result;
     }
 
     private void cleanup() throws SQLException {
@@ -596,38 +617,47 @@ public class DAOImpl implements DAO {
 
     }
 
-    public long save() throws SQLException {
+    public void save() throws SQLException {
 
         connect();
         if (!_conn.getAutoCommit()) {
             throw new SQLException("#save() not supported in transaction, use #insert() or #update() explicitly");
         } else {
-            try {
-                // 1. find out if object exists in DB first
-                // 2. if(exists) update else insert
-                StringBuffer select = new StringBuffer("SELECT ");
-                select.append(getDbColumn(_keys.iterator().next()));
-                select.append(" FROM ").append(getEntity()).append(createFilterStmt());
-                String sql = select.toString();
-                _stmt = _conn.createStatement();
-                _rs = _stmt.executeQuery(sql);
-                boolean doUpdate = _rs.next();
-                if (doUpdate)
-                    _logger.trace("#save - updating existing record " + sql);
-                else
-                    _logger.trace("#save - insert new record " + sql);
-                return doUpdate ? update() : insert();
 
-            } catch (SQLException e) {
-                throw e;
+            String filter;
+
+            try {
+                filter = createFilterStmt();
             } catch (IllegalArgumentException e) {
-                return insert();
+                _logger.trace("#save - insert new record");
+                insert();
+                return;
             }
+            // 1. find out if object exists in DB first
+            // 2. if(exists) update else insert
+            StringBuffer select = new StringBuffer("SELECT ");
+            select.append(getDbColumn(_keys.iterator().next()));
+            select.append(" FROM ").append(getEntity()).append(filter);
+            String sql = select.toString();
+            _stmt = _conn.createStatement();
+            _rs = _stmt.executeQuery(sql);
+            boolean doUpdate = _rs.next();
+
+            if (doUpdate) {
+                _logger.debug("#save - updating existing record");
+                update();
+            } else {
+                _logger.trace("#save - insert new record");
+                insert();
+            }
+
+
         }
     }
 
-    public void saveNulls(boolean updateNulls) {
+    public DAO saveNulls(boolean updateNulls) {
         _keepNullsInQuery = updateNulls;
+        return this;
     }
 
     public boolean select() throws SQLException {
@@ -655,14 +685,26 @@ public class DAOImpl implements DAO {
         }
     }
 
+    /**
+     * java.sql.Date and java.sql.Timestamp must be converted to longs (time in millis) to be set
+     *
+     * @param bean       POJO, with a @Table annotation
+     * @param parameters Parameters key/value pairs as Strings
+     * @return
+     */
+    public DAO setBean(Object bean, Map<String, String> parameters) {
+        this._bean = bean;
+        setEntity(bean.getClass());
+
+        for (String key : parameters.keySet())
+            BeanUtil.setValueFromString(_bean, key, parameters.get(key));
+
+        return this;
+    }
+
     public DAO setBean(Object bean) {
         _bean = bean;
         setEntity(bean.getClass());
-        try {
-            initPK();
-        } catch (SQLException e) {
-            //logger.fine(e.getMessage());
-        }
         return this;
     }
 

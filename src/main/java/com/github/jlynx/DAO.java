@@ -2,6 +2,7 @@ package com.github.jlynx;
 
 import java.sql.SQLException;
 import java.util.List;
+import java.util.Map;
 
 /**
  * This interface defines methods to persist and retrieve POJOs from relational
@@ -19,7 +20,7 @@ public interface DAO {
      * @throws java.sql.SQLException - a database exception
      * @since v1.0
      */
-    boolean delete() throws java.sql.SQLException;
+    boolean delete() throws SQLException;
 
     /**
      * Execute query.
@@ -46,28 +47,26 @@ public interface DAO {
      * @see java.sql.PreparedStatement#executeQuery()
      * @since v1.3
      */
-    List getList(Class resultClass, String query, Object[] params)
+    List<?> getList(Class<?> resultClass, String query, Object[] params)
             throws SQLException, IllegalAccessException, InstantiationException;
 
 
     /**
-     * Inserts 1 row into a database.
+     * Inserts single row into a database.
      *
-     * @return long No. of rows inserted should be 1 -- or -- ID of record inserted
      * @throws SQLException - database exception
      * @since v1.0
      */
-    long insert() throws SQLException;
+    void insert() throws SQLException;
 
     /**
      * Saves POJO to database; equivalent to <code>update()</code> if record
      * exists or <code>insert()</code> if record does not exist. POJO is then
      * updated with current database values.
      *
-     * @return int
      * @throws SQLException - database exception
      */
-    long save() throws SQLException;
+    void save() throws SQLException;
 
     /**
      * Whether <code>null</code> should be preserved in UPDATE and INSERT
@@ -76,28 +75,45 @@ public interface DAO {
      *
      * @param keepNullsInQuery true (nulls are preserved) or false (default - nulls removed
      *                         from SQL queries)
+     * @return DAO
      * @since v1.0
      */
-    void saveNulls(boolean keepNullsInQuery);
+    DAO saveNulls(boolean keepNullsInQuery);
 
     /**
      * Select the associated record from the database and populate the POJO's
      * values; PK value must be set first!
      *
      * @return boolean if records exists returns <code>true</code>
-     * @throws java.sql.SQLException - database exception
+     * @throws java.sql.SQLException database exception
      * @since v1.0
      */
     boolean select() throws java.sql.SQLException;
 
     /**
-     * Sets the object to be used in database transactions. Object MUST have a @Table annotation (as of v1.8)!
+     * Sets the object to be used in database transactions.
+     * <p>
+     * Object MUST have a com.github.jlynx.Table annotation (as of v1.8)!
      *
-     * @param bean any POJO
+     * @param bean POJO, with a @Table annotation
      * @return DAO
      * @since v1.7.0
      */
     DAO setBean(Object bean);
+
+    /**
+     * Sets the object to be used in database transactions.
+     * <p>
+     * Parameters will be set on the properties or at least attempted.
+     * <p>
+     * Object MUST have a @Table annotation (as of v1.8)!
+     *
+     * @param bean       POJO, with a @Table annotation
+     * @param parameters Parameters key/value pairs as Strings
+     * @return DAO
+     * @since v1.9.0
+     */
+    DAO setBean(Object bean, Map<String, String> parameters);
 
     /**
      * The current connection.
@@ -112,7 +128,7 @@ public interface DAO {
      * Update 1 row in the database.
      *
      * @return int - No. of rows affected by the update (should return 1)
-     * @throws java.sql.SQLException - database exception
+     * @throws java.sql.SQLException database exception
      * @since v1.0
      */
     int update() throws java.sql.SQLException;

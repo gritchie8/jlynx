@@ -72,7 +72,7 @@ final class SchemaUtil {
 
             ResultSet resultSet = conn.getMetaData().getPrimaryKeys(null, null, table);
 
-            pks = new HashSet<String>();
+            pks = new HashSet<>();
             String pk = null;
             while (resultSet.next()) {
                 pk = resultSet.getString(4);
