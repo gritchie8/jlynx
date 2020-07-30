@@ -4,7 +4,7 @@ import org.apache.commons.beanutils.PropertyUtils;
 import org.slf4j.LoggerFactory;
 
 import java.beans.PropertyDescriptor;
-import java.lang.reflect.Field;
+import java.lang.reflect.Method;
 import java.util.HashMap;
 import java.util.Map;
 
@@ -13,7 +13,7 @@ import java.util.Map;
  */
 class BeanUtil {
 
-    private static Map<Class<?>, Object[]> cache = new HashMap<Class<?>, Object[]>();
+    private final static Map<Class<?>, Object[]> cache = new HashMap<>();
 
     private BeanUtil() {
     }
@@ -26,13 +26,24 @@ class BeanUtil {
 
         PropertyDescriptor[] propertyDescriptors = PropertyUtils.getPropertyDescriptors(target);
 
-        Map<String, Object> retMap = new HashMap<String, Object>();
+        Map<String, Object> retMap = new HashMap<>();
 
         for (PropertyDescriptor propDescriptor : propertyDescriptors) {
             try {
                 String propName = propDescriptor.getName();
-                if (PropertyUtils.isReadable(target, propName) && PropertyUtils.isWriteable(target, propName))
-                    retMap.put(propName, PropertyUtils.getSimpleProperty(target, propDescriptor.getName()));
+                if (PropertyUtils.isReadable(target, propName)
+                        && PropertyUtils.isWriteable(target, propName)) {
+
+                    boolean annotationValid = true;
+                    Method readMethod = PropertyUtils.getReadMethod(propDescriptor);
+                    if (readMethod.isAnnotationPresent(Column.class)) {
+                        Column column = readMethod.getAnnotation(Column.class);
+                        annotationValid = column.include();
+                    }
+
+                    if (annotationValid)
+                        retMap.put(propName, PropertyUtils.getSimpleProperty(target, propDescriptor.getName()));
+                }
             } catch (Throwable t) {
                 t.printStackTrace();
             }
@@ -60,25 +71,23 @@ class BeanUtil {
      */
     static Object getValue(String property, Object target) {
 
-        // checking @Column
-        for (Field field : target.getClass().getDeclaredFields())
-            if (field.isAnnotationPresent(Column.class) && property.equalsIgnoreCase(field.getAnnotation(Column.class).value())) {
-                property = field.getName();
-                break;
-            }
-
         PropertyDescriptor[] propDescriptors = PropertyUtils.getPropertyDescriptors(target);
         // needed as databases often return uppercase fields
         for (PropertyDescriptor propDescriptor : propDescriptors) {
             if (propDescriptor.getName().equalsIgnoreCase(property)) {
                 property = propDescriptor.getName();
                 break;
+            } else if (propDescriptor.getReadMethod() != null) {
+                Column column = propDescriptor.getReadMethod().getAnnotation(Column.class);
+                if (column != null && column.value().equalsIgnoreCase(property))
+                    property = propDescriptor.getName();
+
             }
         }
 
         try {
             // apache util replaces custom method in jlynx v1.9
-            return PropertyUtils.getProperty(target, property);
+            return PropertyUtils.getSimpleProperty(target, property);
         } catch (Exception e) {
             LoggerFactory.getLogger(BeanUtil.class).warn(e.getMessage());
             return null;
@@ -109,23 +118,33 @@ class BeanUtil {
     }
 
     private static void setPropertyIgnoreCase(Object bean, String property, Object value) {
-
-        // builds a cache first time a bean is used
-        PropertyDescriptor[] propDescriptors = PropertyUtils.getPropertyDescriptors(bean);
-
+        String beanProperty = null;
         // needed as databases often return uppercase fields
-        for (PropertyDescriptor propDescriptor : propDescriptors) {
+        for (PropertyDescriptor propDescriptor : PropertyUtils.getPropertyDescriptors(bean))
             if (propDescriptor.getName().equalsIgnoreCase(property)) {
-                property = propDescriptor.getName();
+                beanProperty = propDescriptor.getName();
                 break;
             }
+
+        //todo handle Column annotation
+        if (beanProperty == null) {
+            for (PropertyDescriptor propDescriptor : PropertyUtils.getPropertyDescriptors(bean)) {
+                Method readMethod = propDescriptor.getReadMethod();
+                if (readMethod.isAnnotationPresent(Column.class)
+                        && readMethod.getAnnotation(Column.class).value().equalsIgnoreCase(property)) {
+                    beanProperty = propDescriptor.getName();
+                    break;
+                }
+            }
+
         }
+
 
         try {
             // apache util replaces custom method in jlynx v1.9
-            PropertyUtils.setProperty(bean, property, value);
+            PropertyUtils.setSimpleProperty(bean, beanProperty, value);
         } catch (Exception e) {
-            LoggerFactory.getLogger(BeanUtil.class).warn(e.getMessage());
+            LoggerFactory.getLogger(BeanUtil.class).error(e.getMessage(), e);
         }
     }
 

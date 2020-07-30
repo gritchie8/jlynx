@@ -22,7 +22,7 @@ public class DAOTest extends TestCase {
     private PersonBean person;
     private DAO dao;
 
-    private final String ddl = "CREATE TABLE PERSON (PERSONID INT IDENTITY PRIMARY KEY," +
+    private final String ddl = "CREATE TABLE PERSON (ID INT IDENTITY PRIMARY KEY," +
             " DOB DATE," +
             " MODTIME TIMESTAMP," +
             " RESUME CLOB," +
@@ -69,7 +69,7 @@ public class DAOTest extends TestCase {
             dao.insert();
         }
 
-        dao.executeSql("UPDATE PERSON SET IMAGE = ? WHERE personId = ?", new Object[]{inputStream, person.getPersonId()});
+        dao.executeSql("UPDATE PERSON SET IMAGE = ? WHERE ID = ?", new Object[]{inputStream, person.getPersonId()});
 
         assertNull(person.getImage());
         dao.select();
@@ -142,6 +142,14 @@ public class DAOTest extends TestCase {
         params.put("modified", "1523412341234");
         dao.setBean(new PersonBean(), params).insert();
         assertTrue(dao.delete());
+    }
+
+    public void test_Col2() throws SQLException {
+        person.setDateOfBirth(new java.sql.Date(80, 04, 14));
+        person.setSurName("RITC");
+        dao.setBean(person).insert();
+        person.setSurName("LIZ");
+        dao.update();
     }
 
 }

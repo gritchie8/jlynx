@@ -1,5 +1,8 @@
 package com.github.jlynx;
 
+import org.apache.commons.beanutils.PropertyUtils;
+
+import java.beans.PropertyDescriptor;
 import java.math.BigDecimal;
 import java.sql.*;
 import java.util.HashSet;
@@ -17,7 +20,7 @@ final class SchemaUtil {
     static final int MSSQL = 200;
 
     static java.util.Map<Integer, String> TYPE_MAPPINGS;
-    private static Map<String, Set<String>> primaryKeys = new TreeMap<String, Set<String>>();
+    final private static Map<String, Set<String>> primaryKeys = new TreeMap<>();
 
     static {
 
@@ -62,11 +65,12 @@ final class SchemaUtil {
         return 0;
     }
 
-    static Set<String> getPK(Connection conn, String table) throws SQLException {
+    static Set<String> getPK(Connection conn, String table, Object bean) throws SQLException {
 
         String url = conn.getMetaData().getURL();
         String key = url + "|" + table;
         Set<String> pks = primaryKeys.get(key);
+        PropertyDescriptor[] propertyDescriptors = PropertyUtils.getPropertyDescriptors(bean);
 
         if (pks == null) {
 
@@ -76,7 +80,20 @@ final class SchemaUtil {
             String pk = null;
             while (resultSet.next()) {
                 pk = resultSet.getString(4);
-                pks.add(pk);
+
+                // add the property
+                boolean added = false;
+                for (PropertyDescriptor propertyDescriptor : propertyDescriptors) {
+                    if (propertyDescriptor.getName().equalsIgnoreCase(pk) ||
+                            (propertyDescriptor.getReadMethod().isAnnotationPresent(Column.class) &&
+                                    propertyDescriptor.getReadMethod().getAnnotation(Column.class).value().equalsIgnoreCase(pk))) {
+                        pks.add(propertyDescriptor.getName());
+                        added = true;
+                        break;
+                    }
+                }
+                if (!added)
+                    pks.add(pk);
             }
 
             if (pk == null)

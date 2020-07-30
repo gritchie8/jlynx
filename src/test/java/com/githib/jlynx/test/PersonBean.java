@@ -9,20 +9,17 @@ import java.sql.Timestamp;
 @Table("PERSON")
 public class PersonBean {
 
-    @Column("DOB")
     private Date dateOfBirth;
     private Object image;
-
-    @Column("ModTime")
     private Timestamp modified;
     private Integer personId;
     private String resume;
-
-    @Column("LastName")
     private String surName;
     private String firstName;
     private Integer age;
+    private boolean hidden = false;
 
+    @Column(value = "DOB")
     public Date getDateOfBirth() {
         return dateOfBirth;
     }
@@ -39,6 +36,7 @@ public class PersonBean {
         this.image = image;
     }
 
+    @Column("ModTime")
     public Timestamp getModified() {
         return modified;
     }
@@ -47,6 +45,7 @@ public class PersonBean {
         this.modified = modified;
     }
 
+    @Column("ID")
     public Integer getPersonId() {
         return personId;
     }
@@ -63,6 +62,7 @@ public class PersonBean {
         this.resume = resume;
     }
 
+    @Column("lastName")
     public String getSurName() {
         return surName;
     }
@@ -85,5 +85,14 @@ public class PersonBean {
 
     public void setAge(Integer age) {
         this.age = age;
+    }
+
+    @Column(include = false)
+    public boolean isHidden() {
+        return hidden;
+    }
+
+    public void setHidden(boolean hidden) {
+        this.hidden = hidden;
     }
 }

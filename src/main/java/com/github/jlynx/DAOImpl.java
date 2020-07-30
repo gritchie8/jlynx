@@ -1,5 +1,6 @@
 package com.github.jlynx;
 
+import org.apache.commons.beanutils.PropertyUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -9,7 +10,7 @@ import javax.naming.NamingException;
 import javax.sql.DataSource;
 import java.io.IOException;
 import java.io.InputStream;
-import java.lang.reflect.Field;
+import java.lang.reflect.Method;
 import java.sql.*;
 import java.util.*;
 
@@ -133,12 +134,6 @@ public class DAOImpl implements DAO {
             if (!entityMap.containsKey(object.getClass().getName()) && object.getClass().isAnnotationPresent(Table.class))
                 entityMap.put(object.getClass().getCanonicalName(), object.getClass().getAnnotation(Table.class).value());
 
-            for (Field field : object.getClass().getDeclaredFields())
-                if (field.isAnnotationPresent(Column.class) && colName.equalsIgnoreCase(field.getAnnotation(Column.class).value())) {
-                    propName = field.getName(); //todo - cache?
-                    break;
-                }
-
             BeanUtil.setValue(propName, object, value);
 
         } // end for-loop of
@@ -241,6 +236,7 @@ public class DAOImpl implements DAO {
         Object obj = _bean;
 
         removeNulls(props);
+
         if (props.isEmpty())
             return "INSERT INTO " + _entityName + " DEFAULT VALUES";
 
@@ -249,15 +245,8 @@ public class DAOImpl implements DAO {
         for (String prop : props.keySet()) {
             fields[j++] = prop;
 
-            // handle Column annotation
-            String column = null;
-            for (Field field : _bean.getClass().getDeclaredFields())
-                if (field.getName().equalsIgnoreCase(prop) && field.isAnnotationPresent(Column.class)) {
-                    column = field.getAnnotation(Column.class).value();
-                    break;
-                }
+            sql.append(getDbColumn(prop));
 
-            sql.append(getDbColumn(column == null ? prop.toUpperCase() : column));
             if (j < fields.length)
                 sql.append(",");
             else {
@@ -517,9 +506,17 @@ public class DAOImpl implements DAO {
     private String getDbColumn(String prop) {
 
         // handle Column annotation; here new to 1.8.0
-        for (Field field : _bean.getClass().getDeclaredFields())
-            if (field.getName().equalsIgnoreCase(prop) && field.isAnnotationPresent(Column.class))
-                return field.getAnnotation(Column.class).value();
+        try {
+            Method readMethod = PropertyUtils.getPropertyDescriptor(_bean, prop).getReadMethod();
+            if (readMethod != null) {
+                Column column = readMethod.getAnnotation(Column.class);
+                if (column != null)
+                    return column.value();
+            }
+        } catch (Throwable e) {
+            _logger.error("Error reading " + prop, e);
+            throw new RuntimeException(e);
+        }
 
         return prop.toUpperCase();
     }
@@ -528,7 +525,7 @@ public class DAOImpl implements DAO {
     private void initPK() throws SQLException {
         _keys = null;
         if (getEntity() != null)
-            _keys = SchemaUtil.getPK(_conn, getEntity());
+            _keys = SchemaUtil.getPK(_conn, getEntity(), this._bean);
         else
             _logger.warn("Call DAO#setBean() first");
     }
@@ -553,7 +550,7 @@ public class DAOImpl implements DAO {
             if (supportsGetGeneratedKeys) {
                 if (_keys.size() == 1 && _dbVendor != SchemaUtil.MSSQL) {
                     pk = _keys.iterator().next();
-                    result = _stmt.executeUpdate(sql, new String[]{pk});
+                    result = _stmt.executeUpdate(sql, new String[]{getDbColumn(pk)});
                 } else
                     result = _stmt.executeUpdate(sql, Statement.RETURN_GENERATED_KEYS);
             } else

@@ -6,6 +6,9 @@ import java.lang.annotation.RetentionPolicy;
 @Retention(RetentionPolicy.RUNTIME)
 public @interface Column {
 
-    String value();
+    String value() default "";
+
+    boolean include() default true;
+
 
 }

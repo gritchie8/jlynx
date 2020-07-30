@@ -93,7 +93,7 @@ public interface DAO {
     /**
      * Sets the object to be used in database transactions.
      * <p>
-     * Object MUST have a com.github.jlynx.Table annotation (as of v1.8)!
+     * Object MUST have a com.github.jlynx.Table annotation. (v1.8+)
      *
      * @param bean POJO, with a @Table annotation
      * @return DAO
@@ -106,7 +106,7 @@ public interface DAO {
      * <p>
      * Parameters will be set on the properties or at least attempted.
      * <p>
-     * Object MUST have a @Table annotation (as of v1.8)!
+     * Object MUST have a @Table annotation.
      *
      * @param bean       POJO, with a @Table annotation
      * @param parameters Parameters key/value pairs as Strings

@@ -9,13 +9,14 @@ jLynx RELEASE NOTES
 jLynx CHANGE LOG
 ----------------
 
-v1.9.0 (Jul-2020)
+v2.0.0 (Jul-2020)
 
   - cleaned up code; source compatibility with JDK 1.8
   - insert & save method return types changed from int to long to support large tables (2+ billion rows)
   - tweaked/improved identity column returns for insert
   - use commons-beans now over custom methods
   - overloaded setBean method
+  - @Column must now be set on getter and newly has a setting to skip a property
   - logging is now slf4j (again)
 
 v1.8.1 (Mar-2020)
