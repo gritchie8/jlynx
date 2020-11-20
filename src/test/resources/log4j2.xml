@@ -12,7 +12,7 @@
         <Root level="info">
             <AppenderRef ref="Console"/>
         </Root>
-        <Logger name="com.github.jlynx.DAOImpl" level="trace" additivity="false">
+        <Logger name="jlynx" level="trace" additivity="false">
             <AppenderRef ref="Console"/>
         </Logger>
     </Loggers>

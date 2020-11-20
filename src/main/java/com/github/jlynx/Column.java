@@ -10,5 +10,6 @@ public @interface Column {
 
     boolean include() default true;
 
+    boolean pk() default false;
 
 }

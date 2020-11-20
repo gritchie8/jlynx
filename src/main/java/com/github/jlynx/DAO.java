@@ -27,11 +27,12 @@ public interface DAO {
      *
      * @param sql    SQL query
      * @param params parameters in SQL statement
-     * @return boolean
+     * @return boolean true if the first result is a ResultSet object; false if the first result is an update count or there is no result
      * @throws SQLException database exception
      * @see java.sql.PreparedStatement#execute()
      * @since v1.3
      */
+    @SuppressWarnings("unused")
     boolean executeSql(String sql, Object[] params) throws SQLException;
 
     /**
@@ -78,6 +79,7 @@ public interface DAO {
      * @return DAO
      * @since v1.0
      */
+    @SuppressWarnings("unused")
     DAO saveNulls(boolean keepNullsInQuery);
 
     /**
@@ -131,6 +133,7 @@ public interface DAO {
      * @throws java.sql.SQLException database exception
      * @since v1.0
      */
+    @SuppressWarnings("unused")
     int update() throws java.sql.SQLException;
 
 }

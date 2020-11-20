@@ -17,10 +17,11 @@ final class StringUtil {
 
     }
 
+    @SuppressWarnings("all")
     static String replace(String source, String pattern, String replace) {
         if (source != null) {
             final int len = pattern.length();
-            StringBuffer sb = new StringBuffer();
+            StringBuilder sb = new StringBuilder();
             int found = -1;
             int start = 0;
 

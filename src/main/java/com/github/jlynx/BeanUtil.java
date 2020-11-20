@@ -1,51 +1,38 @@
 package com.github.jlynx;
 
-import org.apache.commons.beanutils.PropertyUtils;
 import org.slf4j.LoggerFactory;
 
-import java.beans.PropertyDescriptor;
-import java.lang.reflect.Method;
+import java.io.InputStream;
+import java.lang.reflect.Field;
+import java.sql.Timestamp;
 import java.util.HashMap;
 import java.util.Map;
 
 /**
- * Bean utils used by jLynx.
+ * Bean utilities used by jLynx.
  */
 class BeanUtil {
 
-    private final static Map<Class<?>, Object[]> cache = new HashMap<>();
+    private final static Map<Class<?>, Field[]> cache = new HashMap<>();
+
+    static Field[] getFields(Class<?> targetClass) {
+        cache.computeIfAbsent(targetClass, Class::getFields);
+        return cache.get(targetClass);
+    }
 
     private BeanUtil() {
     }
 
-    /*private static String decapitalize(String fieldName) {
-        return Introspector.decapitalize(fieldName);
-    }*/
-
     static Map<String, Object> describe(Object target) {
-
-        PropertyDescriptor[] propertyDescriptors = PropertyUtils.getPropertyDescriptors(target);
 
         Map<String, Object> retMap = new HashMap<>();
 
-        for (PropertyDescriptor propDescriptor : propertyDescriptors) {
+        for (Field field : getFields(target.getClass())) {
             try {
-                String propName = propDescriptor.getName();
-                if (PropertyUtils.isReadable(target, propName)
-                        && PropertyUtils.isWriteable(target, propName)) {
-
-                    boolean annotationValid = true;
-                    Method readMethod = PropertyUtils.getReadMethod(propDescriptor);
-                    if (readMethod.isAnnotationPresent(Column.class)) {
-                        Column column = readMethod.getAnnotation(Column.class);
-                        annotationValid = column.include();
-                    }
-
-                    if (annotationValid)
-                        retMap.put(propName, PropertyUtils.getSimpleProperty(target, propDescriptor.getName()));
-                }
-            } catch (Throwable t) {
-                t.printStackTrace();
+                if (!field.isAnnotationPresent(Column.class) || field.getAnnotation(Column.class).include())
+                    retMap.put(field.getName(), field.get(target));
+            } catch (IllegalAccessException e) {
+                e.printStackTrace();
             }
         }
 
@@ -54,16 +41,8 @@ class BeanUtil {
 
     static Class<?> getType(String property, Object target) {
 
-        if (PropertyUtils.isWriteable(target, property) && PropertyUtils.isReadable(target, property)) {
-            try {
-                return PropertyUtils.getPropertyType(target, property);
-            } catch (Exception e) {
-                e.printStackTrace();
-                throw new RuntimeException("Invalid bean property");
-            }
-        } else
-            throw new RuntimeException("Invalid bean property");
-
+        Field field = getFieldIgnoreCase(target, property);
+        return field.getType();
     }
 
     /**
@@ -71,88 +50,88 @@ class BeanUtil {
      */
     static Object getValue(String property, Object target) {
 
-        PropertyDescriptor[] propDescriptors = PropertyUtils.getPropertyDescriptors(target);
-        // needed as databases often return uppercase fields
-        for (PropertyDescriptor propDescriptor : propDescriptors) {
-            if (propDescriptor.getName().equalsIgnoreCase(property)) {
-                property = propDescriptor.getName();
-                break;
-            } else if (propDescriptor.getReadMethod() != null) {
-                Column column = propDescriptor.getReadMethod().getAnnotation(Column.class);
-                if (column != null && column.value().equalsIgnoreCase(property))
-                    property = propDescriptor.getName();
-
-            }
-        }
+        Field fieldToGet = getFieldIgnoreCase(target, property);
 
         try {
-            // apache util replaces custom method in jlynx v1.9
-            return PropertyUtils.getSimpleProperty(target, property);
-        } catch (Exception e) {
-            LoggerFactory.getLogger(BeanUtil.class).warn(e.getMessage());
-            return null;
+            return fieldToGet.get(target);
+        } catch (NullPointerException | IllegalAccessException e) {
+            e.printStackTrace();
         }
+
+        return null;
 
     }
 
     static void setValueFromString(Object bean, String property, String value) {
-        try {
-            if (PropertyUtils.isWriteable(bean, property)) {
-                Class<?> propType = PropertyUtils.getPropertyType(bean, property);
-                if (propType.isAssignableFrom(String.class))
-                    PropertyUtils.setSimpleProperty(bean, property, value);
-                else if (propType.isAssignableFrom(java.sql.Date.class) || propType.isAssignableFrom(java.sql.Timestamp.class)) {
-                    Object value2 = propType.getDeclaredConstructor(long.class).newInstance(Long.parseLong(value));
-                    PropertyUtils.setSimpleProperty(bean, property, value2);
-                } else {
-                    Object value2 = propType.getDeclaredConstructor(String.class).newInstance(value);
-                    PropertyUtils.setSimpleProperty(bean, property, value2);
+
+        for (Field field : getFields(bean.getClass())) {
+            if (field.getName().equalsIgnoreCase(property))
+                try {
+
+                    Class<?> typeClass = field.getType();
+
+                    if (typeClass == String.class)
+                        field.set(bean, value);
+                    else if (typeClass == Integer.class)
+                        field.set(bean, Integer.parseInt(value));
+                    else if (typeClass == Long.class)
+                        field.set(bean, Long.parseLong(value));
+                    else if (typeClass == java.sql.Date.class || typeClass == java.sql.Timestamp.class) {
+                        long time = Long.parseLong(value);
+                        Object dateVal = typeClass.getDeclaredConstructor(long.class).newInstance(time);
+                        field.set(bean, dateVal);
+                    } else
+                        field.set(bean, typeClass.getDeclaredConstructor(String.class).newInstance(value));
+
+                    return;
+                } catch (Throwable e) {
+                    e.printStackTrace();
                 }
-            }
-        } catch (Exception throwable) {
-            LoggerFactory.getLogger(BeanUtil.class).error("#setBean - could not set simple property " +
-                    bean.getClass().getSimpleName() +
-                    "#" + property + " - " + throwable.getClass().getSimpleName()
-                    + " - " + throwable.getMessage());
-        }
-    }
-
-    private static void setPropertyIgnoreCase(Object bean, String property, Object value) {
-        String beanProperty = null;
-        // needed as databases often return uppercase fields
-        for (PropertyDescriptor propDescriptor : PropertyUtils.getPropertyDescriptors(bean))
-            if (propDescriptor.getName().equalsIgnoreCase(property)) {
-                beanProperty = propDescriptor.getName();
-                break;
-            }
-
-        //todo handle Column annotation
-        if (beanProperty == null) {
-            for (PropertyDescriptor propDescriptor : PropertyUtils.getPropertyDescriptors(bean)) {
-                Method readMethod = propDescriptor.getReadMethod();
-                if (readMethod.isAnnotationPresent(Column.class)
-                        && readMethod.getAnnotation(Column.class).value().equalsIgnoreCase(property)) {
-                    beanProperty = propDescriptor.getName();
-                    break;
-                }
-            }
-
-        }
-
-
-        try {
-            // apache util replaces custom method in jlynx v1.9
-            PropertyUtils.setSimpleProperty(bean, beanProperty, value);
-        } catch (Exception e) {
-            LoggerFactory.getLogger(BeanUtil.class).error(e.getMessage(), e);
         }
     }
 
     /**
      * This method performs in a case-insensitive manner
      */
-    static void setValue(String property, Object target, Object value) {
-        setPropertyIgnoreCase(target, property, value);
+    static void setValue(String propertyOrColumn, Object target, Object value) {
+
+        if (value == null || value.getClass().getPackage().getName().startsWith("java") || value instanceof InputStream) {
+
+            Field fieldToSet = getFieldIgnoreCase(target, propertyOrColumn);
+
+            try {
+                if (value instanceof java.sql.Timestamp &&
+                        fieldToSet.getType().getCanonicalName().equalsIgnoreCase("java.sql.Date")) {
+                    long time = ((Timestamp) value).getTime();
+                    fieldToSet.set(target, new java.sql.Date(time));
+                } else
+                    fieldToSet.set(target, value);
+            } catch (NullPointerException | IllegalAccessException | IllegalArgumentException e) {
+                if (LoggerFactory.getLogger("jlynx").isTraceEnabled())
+                    LoggerFactory.getLogger("jlynx").trace("value = " + value);
+                if (!(e instanceof NullPointerException))
+                    LoggerFactory.getLogger("jlynx").error(e.getMessage());
+                LoggerFactory.getLogger("jlynx").warn("'" + propertyOrColumn + "' not set on: "
+                        + target.getClass().getCanonicalName() + ". Is the field missing?");
+            }
+
+        } else
+            LoggerFactory.getLogger("jlynx").warn(propertyOrColumn + " could not be set, not an expected type");
+
+    }
+
+    private static Field getFieldIgnoreCase(Object bean, String fieldOrColumn) {
+        Field field1 = null;
+        for (Field fieldToCheck : BeanUtil.getFields(bean.getClass()))
+            if (fieldToCheck.getName().equalsIgnoreCase(fieldOrColumn)) {
+                field1 = fieldToCheck;
+                break;
+            } else if (fieldToCheck.isAnnotationPresent(Column.class)
+                    && fieldOrColumn.equalsIgnoreCase(fieldToCheck.getAnnotation(Column.class).value())) {
+                field1 = fieldToCheck;
+                break;
+            }
+        return field1;
     }
 
 }

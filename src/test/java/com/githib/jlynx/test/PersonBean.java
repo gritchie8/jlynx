@@ -3,96 +3,40 @@ package com.githib.jlynx.test;
 import com.github.jlynx.Column;
 import com.github.jlynx.Table;
 
+import java.math.BigDecimal;
 import java.sql.Date;
 import java.sql.Timestamp;
 
 @Table("PERSON")
 public class PersonBean {
 
-    private Date dateOfBirth;
-    private Object image;
-    private Timestamp modified;
-    private Integer personId;
-    private String resume;
-    private String surName;
-    private String firstName;
-    private Integer age;
-    private boolean hidden = false;
-
-    @Column(value = "DOB")
-    public Date getDateOfBirth() {
-        return dateOfBirth;
-    }
-
-    public void setDateOfBirth(Date dateOfBirth) {
-        this.dateOfBirth = dateOfBirth;
-    }
-
-    public Object getImage() {
-        return image;
-    }
-
-    public void setImage(Object image) {
-        this.image = image;
-    }
-
-    @Column("ModTime")
-    public Timestamp getModified() {
-        return modified;
-    }
-
-    public void setModified(Timestamp modified) {
-        this.modified = modified;
-    }
-
     @Column("ID")
-    public Integer getPersonId() {
-        return personId;
-    }
+    public Integer PersonId;
 
-    public void setPersonId(Integer personId) {
-        this.personId = personId;
-    }
+    @SuppressWarnings("unused")
+    protected String Resume;
 
-    public String getResume() {
-        return resume;
-    }
+    public String FirstName;
+    public Integer Age;
+    public Object Image;
+    public BigDecimal Amt;// = BigDecimal.valueOf(88545.65);
 
-    public void setResume(String resume) {
-        this.resume = resume;
-    }
+    @Column("DOB")
+    public Date DateOfBirth;
 
     @Column("lastName")
-    public String getSurName() {
-        return surName;
-    }
+    public String SurName;
 
-    public void setSurName(String surName) {
-        this.surName = surName;
-    }
+    @Column(value = "Age2")
+    public Integer age2;
 
-    public String getFirstName() {
-        return firstName;
-    }
-
-    public void setFirstName(String firstName) {
-        this.firstName = firstName;
-    }
-
-    public Integer getAge() {
-        return age;
-    }
-
-    public void setAge(Integer age) {
-        this.age = age;
-    }
+    @Column("ModTime")
+    public Timestamp Modified;
 
     @Column(include = false)
-    public boolean isHidden() {
-        return hidden;
-    }
+    @SuppressWarnings("unused")
+    public boolean Hidden = true;
 
-    public void setHidden(boolean hidden) {
-        this.hidden = hidden;
-    }
+    @Column(include = false)
+    public Integer WeightInKg = 79;
 }

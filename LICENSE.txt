@@ -2,7 +2,7 @@
 -----------------------------------
 
 
-Copyright (c) 2019, jlynx project hosted at http://github.com
+Copyright (c) 2020, jlynx project hosted at http://github.com
 
 
 

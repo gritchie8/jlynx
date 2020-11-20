@@ -1,8 +1,5 @@
 package com.github.jlynx;
 
-import org.apache.commons.beanutils.PropertyUtils;
-
-import java.beans.PropertyDescriptor;
 import java.math.BigDecimal;
 import java.sql.*;
 import java.util.HashSet;
@@ -24,7 +21,7 @@ final class SchemaUtil {
 
     static {
 
-        TYPE_MAPPINGS = new TreeMap<Integer, String>();
+        TYPE_MAPPINGS = new TreeMap<>();
         TYPE_MAPPINGS.put(Types.BIT, "boolean");
 
         TYPE_MAPPINGS.put(Types.BLOB, "java.sql.Blob");
@@ -65,12 +62,11 @@ final class SchemaUtil {
         return 0;
     }
 
-    static Set<String> getPK(Connection conn, String table, Object bean) throws SQLException {
+    static Set<String> getPK(Connection conn, String table) throws SQLException {
 
         String url = conn.getMetaData().getURL();
         String key = url + "|" + table;
         Set<String> pks = primaryKeys.get(key);
-        PropertyDescriptor[] propertyDescriptors = PropertyUtils.getPropertyDescriptors(bean);
 
         if (pks == null) {
 
@@ -80,20 +76,7 @@ final class SchemaUtil {
             String pk = null;
             while (resultSet.next()) {
                 pk = resultSet.getString(4);
-
-                // add the property
-                boolean added = false;
-                for (PropertyDescriptor propertyDescriptor : propertyDescriptors) {
-                    if (propertyDescriptor.getName().equalsIgnoreCase(pk) ||
-                            (propertyDescriptor.getReadMethod().isAnnotationPresent(Column.class) &&
-                                    propertyDescriptor.getReadMethod().getAnnotation(Column.class).value().equalsIgnoreCase(pk))) {
-                        pks.add(propertyDescriptor.getName());
-                        added = true;
-                        break;
-                    }
-                }
-                if (!added)
-                    pks.add(pk);
+                pks.add(pk);
             }
 
             if (pk == null)

@@ -1,6 +1,5 @@
 package com.github.jlynx;
 
-import org.apache.commons.beanutils.PropertyUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -10,7 +9,7 @@ import javax.naming.NamingException;
 import javax.sql.DataSource;
 import java.io.IOException;
 import java.io.InputStream;
-import java.lang.reflect.Method;
+import java.lang.reflect.Field;
 import java.sql.*;
 import java.util.*;
 
@@ -22,7 +21,7 @@ import java.util.*;
 public class DAOImpl implements DAO {
 
     private final static Map<String, String> entityMap = new TreeMap<>();
-    private final static Logger _logger = LoggerFactory.getLogger(DAOImpl.class);
+    private final static Logger _logger = LoggerFactory.getLogger("jlynx");
 
     private Object _bean;
     private Connection _conn;
@@ -49,6 +48,7 @@ public class DAOImpl implements DAO {
      * @param connection JDBC database connection
      * @return DAO
      */
+    @SuppressWarnings("unused")
     public static DAO newInstance(Connection connection) {
         DAOImpl dao = new DAOImpl();
         dao._conn = connection;
@@ -75,6 +75,7 @@ public class DAOImpl implements DAO {
      * @param dataSourceName JNDI
      * @return DAO
      */
+    @SuppressWarnings("unused")
     public static DAO newInstance(String dataSourceName) {
         DAOImpl dao = new DAOImpl();
         dao._dsName = dataSourceName;
@@ -88,7 +89,7 @@ public class DAOImpl implements DAO {
 
             String colName = rs.getMetaData().getColumnName(colIndex);
             Object value;
-            String propName = colName;
+            //String propName = colName;
             int type = rs.getMetaData().getColumnType(colIndex);
 
             switch (type) {
@@ -134,7 +135,7 @@ public class DAOImpl implements DAO {
             if (!entityMap.containsKey(object.getClass().getName()) && object.getClass().isAnnotationPresent(Table.class))
                 entityMap.put(object.getClass().getCanonicalName(), object.getClass().getAnnotation(Table.class).value());
 
-            BeanUtil.setValue(propName, object, value);
+            BeanUtil.setValue(colName, object, value);
 
         } // end for-loop of
 
@@ -151,6 +152,7 @@ public class DAOImpl implements DAO {
 
     }
 
+    @Override
     public Connection getConnection() throws SQLException {
         connect();
         return _conn;
@@ -200,13 +202,24 @@ public class DAOImpl implements DAO {
         if (_bean == null)
             throw new UnsupportedOperationException("Call #setBean() before performing database operations.");
 
-        StringBuffer sql = new StringBuffer();
+        StringBuilder sql = new StringBuilder();
         final String and = " AND ";
         if (_keys == null) {
             try {
                 initPK();
             } catch (SQLException e) {
-                throw new java.lang.IllegalArgumentException(e.getMessage());
+                // check for Column pk annotation
+                _keys = new HashSet<>();
+                for (Field f : this._bean.getClass().getFields()) {
+                    if (f.isAnnotationPresent(Column.class) && f.getAnnotation(Column.class).pk())
+                        _keys.add(f.getAnnotation(Column.class).value());
+                }
+                if (_keys.isEmpty()) {
+                    _logger.error(e.getMessage());
+                    throw new IllegalStateException("Primary key not on the table, or annotated correctly on class "
+                            + this._bean.getClass().getName());
+                }
+                _logger.warn("Using column annotation on table without a PK");
             }
         }
 
@@ -272,6 +285,9 @@ public class DAOImpl implements DAO {
                 if (java.sql.Timestamp.class.equals(BeanUtil.getType(fields[j], obj))) {
                     oracleDate1 = "to_date(";
                     oracleDate2 = ",'yyyy-mm-dd hh24:mi:ss\".999\"')";
+                } else if (java.sql.Date.class.equals(BeanUtil.getType(fields[j], obj))) {
+                    oracleDate1 = "to_date(";
+                    oracleDate2 = ",'yyyy-mm-dd')";
                 }
             }
 
@@ -324,7 +340,7 @@ public class DAOImpl implements DAO {
 
     private String createUpdateStmt() {
 
-        StringBuffer sql = new StringBuffer("UPDATE ").append(_entityName).append(" SET ");
+        StringBuilder sql = new StringBuilder("UPDATE ").append(_entityName).append(" SET ");
 
         String where = createFilterStmt();
 
@@ -366,7 +382,9 @@ public class DAOImpl implements DAO {
                     if (java.sql.Timestamp.class.equals(cls)) {
                         oracleDate1 = "to_date(";
                         oracleDate2 = ",'yyyy-mm-dd hh24:mi:ss\".999\"')";
-
+                    } else if (java.sql.Date.class.equals(cls)) {
+                        oracleDate1 = "to_date(";
+                        oracleDate2 = ",'yyyy-mm-dd')";
                     }
                 }
 
@@ -409,12 +427,13 @@ public class DAOImpl implements DAO {
 
         }
 
-        String sql2 = sql.toString().substring(0, sql.length() - 2) + where;
+        String sql2 = sql.substring(0, sql.length() - 2) + where;
 
         sql2 = StringUtil.fixNulls(sql2);
         return sql2;
     }
 
+    @Override
     public final boolean delete() throws SQLException {
 
         connect();
@@ -426,13 +445,12 @@ public class DAOImpl implements DAO {
             _stmt = _conn.createStatement();
             int result = _stmt.executeUpdate(sql);
             return result == 1;
-        } catch (SQLException e) {
-            throw e;
         } finally {
             cleanup();
         }
     }
 
+    @Override
     public boolean executeSql(String sql, Object[] p) throws SQLException {
 
         try {
@@ -440,22 +458,19 @@ public class DAOImpl implements DAO {
             _ps = _conn.prepareStatement(sql);
             setParams(p);
             return _ps.execute();
-        } catch (SQLException e) {
-            throw e;
         } finally {
-            if (_conn != null && _conn.getAutoCommit())
-                cleanup();
+            cleanup();
         }
     }
 
-    private List<?> executeQuery() throws SQLException {
+    private List<Object> executeQuery() throws SQLException {
 
-        List<Object> result = new ArrayList<Object>();
+        List<Object> result = new ArrayList<>();
 
         if (_ps != null && _bean != null)
             _rs = _ps.executeQuery();
         else {
-            throw new SQLException("result bean not found!");
+            throw new IllegalArgumentException("#executeQuery - result bean not found!");
         }
 
         while (_rs != null && _rs.next()) {
@@ -479,6 +494,7 @@ public class DAOImpl implements DAO {
 
     }
 
+    @Override
     public List<?> getList(Class<?> resultClass, String sql, Object[] p)
             throws SQLException, InstantiationException, IllegalAccessException {
         connect();
@@ -506,16 +522,13 @@ public class DAOImpl implements DAO {
     private String getDbColumn(String prop) {
 
         // handle Column annotation; here new to 1.8.0
-        try {
-            Method readMethod = PropertyUtils.getPropertyDescriptor(_bean, prop).getReadMethod();
-            if (readMethod != null) {
-                Column column = readMethod.getAnnotation(Column.class);
-                if (column != null)
-                    return column.value();
+        for (Field field : BeanUtil.getFields(_bean.getClass())) {
+            if (field.getName().equalsIgnoreCase(prop)) {
+                if (!field.isAnnotationPresent(Column.class))
+                    return prop.toUpperCase();
+                else
+                    return field.getAnnotation(Column.class).value();
             }
-        } catch (Throwable e) {
-            _logger.error("Error reading " + prop, e);
-            throw new RuntimeException(e);
         }
 
         return prop.toUpperCase();
@@ -525,19 +538,20 @@ public class DAOImpl implements DAO {
     private void initPK() throws SQLException {
         _keys = null;
         if (getEntity() != null)
-            _keys = SchemaUtil.getPK(_conn, getEntity(), this._bean);
+            _keys = SchemaUtil.getPK(_conn, getEntity());
         else
             _logger.warn("Call DAO#setBean() first");
     }
 
+    @Override
     public final void insert() throws SQLException {
 
         connect();
         try {
             if (_keys == null)
                 initPK();
-        } catch (SQLException sqle) {
-            _logger.warn(sqle.getMessage());
+        } catch (SQLException e) {
+            _logger.warn(e.getMessage());
         }
 
         long result;
@@ -570,7 +584,7 @@ public class DAOImpl implements DAO {
             }
 
         } catch (SQLException e) {
-            //logger.log(error, e.getMessage());
+            _logger.error(e.getMessage(), e);
             throw e;
         } finally {
             cleanup();
@@ -579,6 +593,11 @@ public class DAOImpl implements DAO {
     }
 
     private void cleanup() throws SQLException {
+
+        if (_conn != null && !_conn.getAutoCommit()) {
+            _logger.warn("#cleanup not executed - auto commit is off");
+            return;
+        }
         if (_rs != null) {
             _rs.close();
             _rs = null;
@@ -591,11 +610,20 @@ public class DAOImpl implements DAO {
             _ps.close();
             _ps = null;
         }
+
+        if (_conn != null) {
+            _conn.close();
+            _conn = null;
+        }
+
+        if (_logger.isTraceEnabled())
+            _logger.trace("#cleanup executed, connection closed");
+
     }
 
     private void removeNulls(Map<String, Object> map) {
 
-        Set<String> keysToRemove = new HashSet<String>();
+        Set<String> keysToRemove = new HashSet<>();
 
         for (String key : map.keySet()) {
 
@@ -614,6 +642,7 @@ public class DAOImpl implements DAO {
 
     }
 
+    @Override
     public void save() throws SQLException {
 
         connect();
@@ -632,19 +661,22 @@ public class DAOImpl implements DAO {
             }
             // 1. find out if object exists in DB first
             // 2. if(exists) update else insert
-            StringBuffer select = new StringBuffer("SELECT ");
+            StringBuilder select = new StringBuilder("SELECT ");
             select.append(getDbColumn(_keys.iterator().next()));
             select.append(" FROM ").append(getEntity()).append(filter);
-            String sql = select.toString();
             _stmt = _conn.createStatement();
-            _rs = _stmt.executeQuery(sql);
+            _rs = _stmt.executeQuery(select.toString());
+            if (_logger.isTraceEnabled())
+                _logger.trace(select.toString());
             boolean doUpdate = _rs.next();
 
             if (doUpdate) {
-                _logger.debug("#save - updating existing record");
+                if (_logger.isDebugEnabled())
+                    _logger.debug("#save - updating existing record");
                 update();
             } else {
-                _logger.trace("#save - insert new record");
+                if (_logger.isTraceEnabled())
+                    _logger.trace("#save - insert new record");
                 insert();
             }
 
@@ -652,11 +684,13 @@ public class DAOImpl implements DAO {
         }
     }
 
+    @Override
     public DAO saveNulls(boolean updateNulls) {
         _keepNullsInQuery = updateNulls;
         return this;
     }
 
+    @Override
     public boolean select() throws SQLException {
 
         connect();
@@ -674,9 +708,6 @@ public class DAOImpl implements DAO {
 
             return result;
 
-        } catch (SQLException e) {
-            //logger.log(error, e.getMessage());
-            throw e;
         } finally {
             cleanup();
         }
@@ -687,8 +718,9 @@ public class DAOImpl implements DAO {
      *
      * @param bean       POJO, with a @Table annotation
      * @param parameters Parameters key/value pairs as Strings
-     * @return
+     * @return DAO       DAO interface
      */
+    @Override
     public DAO setBean(Object bean, Map<String, String> parameters) {
         this._bean = bean;
         setEntity(bean.getClass());
@@ -699,6 +731,7 @@ public class DAOImpl implements DAO {
         return this;
     }
 
+    @Override
     public DAO setBean(Object bean) {
         _bean = bean;
         setEntity(bean.getClass());
@@ -724,6 +757,7 @@ public class DAOImpl implements DAO {
         }
     }
 
+    @Override
     public final int update() throws SQLException {
         connect();
         try {
@@ -732,8 +766,6 @@ public class DAOImpl implements DAO {
             if (_logger.isDebugEnabled())
                 _logger.debug("#update - " + sql);
             return _stmt.executeUpdate(sql);
-        } catch (SQLException e) {
-            throw e;
         } finally {
             cleanup();
         }
