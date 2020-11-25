@@ -117,9 +117,11 @@ public class DAOImpl implements DAO {
                     break;
                 case Types.INTEGER:
                 case Types.TINYINT:
-                case Types.BIGINT:
                 case Types.SMALLINT:
                     value = rs.getInt(colIndex);
+                    break;
+                case Types.BIGINT:
+                    value = rs.getLong(colIndex);
                     break;
                 case Types.NUMERIC:
                 case Types.DECIMAL:
@@ -560,14 +562,16 @@ public class DAOImpl implements DAO {
             _logger.debug("#insert - " + sql);
             _stmt = _conn.createStatement();
             boolean supportsGetGeneratedKeys = _conn.getMetaData().supportsGetGeneratedKeys();
-            String pk = null;
-            if (supportsGetGeneratedKeys) {
-                if (_keys.size() == 1 && _dbVendor != SchemaUtil.MSSQL) {
-                    pk = _keys.iterator().next();
-                    result = _stmt.executeUpdate(sql, new String[]{getDbColumn(pk)});
+            if (supportsGetGeneratedKeys)
+                if (_dbVendor == SchemaUtil.ORACLE) {
+                    if (_keys != null && _keys.size() == 1) {
+                        String pk = _keys.iterator().next();
+                        result = _stmt.executeUpdate(sql, new String[]{getDbColumn(pk)});
+                    } else
+                        result = _stmt.executeUpdate(sql);
                 } else
                     result = _stmt.executeUpdate(sql, Statement.RETURN_GENERATED_KEYS);
-            } else
+            else
                 result = _stmt.executeUpdate(sql);
 
             if (result == 1 && supportsGetGeneratedKeys) {
@@ -576,10 +580,22 @@ public class DAOImpl implements DAO {
                 if (_rs.next()) {
 
                     final String pkProperty = _keys.iterator().next();
+
                     if (_logger.isTraceEnabled())
-                        _logger.trace("#insert - attempting to set identity value " + pk + " = " + result);
-                    BeanUtil.setValue(pkProperty, _bean, null);
-                    BeanUtil.setValue(pkProperty, _bean, _rs.getObject(1));
+                        _logger.trace("#insert - attempting to set identity value " + pkProperty);
+
+                    Object keyVal = _rs.getObject(1);
+                    if (keyVal != null) {
+                        if (keyVal instanceof Long) {
+                            if ((Long) keyVal > 0)
+                                BeanUtil.setValue(pkProperty, _bean, keyVal);
+                        } else if (keyVal instanceof Integer) {
+                            if ((Integer) keyVal > 0)
+                                BeanUtil.setValue(pkProperty, _bean, keyVal);
+                        } else
+                            BeanUtil.setValue(pkProperty, _bean, keyVal);
+                    }
+
                 }
             }
 
