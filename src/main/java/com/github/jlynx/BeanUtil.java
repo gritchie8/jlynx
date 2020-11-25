@@ -85,7 +85,7 @@ class BeanUtil {
 
                     return;
                 } catch (Throwable e) {
-                    e.printStackTrace();
+                    LoggerFactory.getLogger("jlynx").error(e.getMessage());
                 }
         }
     }
@@ -104,8 +104,11 @@ class BeanUtil {
                         fieldToSet.getType().getCanonicalName().equalsIgnoreCase("java.sql.Date")) {
                     long time = ((Timestamp) value).getTime();
                     fieldToSet.set(target, new java.sql.Date(time));
-                } else
-                    fieldToSet.set(target, value);
+                } else {
+                    if (value == null || fieldToSet.getType().isAssignableFrom(value.getClass()))
+                        fieldToSet.set(target, value);
+                }
+
             } catch (NullPointerException | IllegalAccessException | IllegalArgumentException e) {
                 if (LoggerFactory.getLogger("jlynx").isTraceEnabled())
                     LoggerFactory.getLogger("jlynx").trace("value = " + value);

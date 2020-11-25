@@ -15,6 +15,7 @@ final class SchemaUtil {
 
     static final int ORACLE = 100;
     static final int MSSQL = 200;
+    static final int POSTGRESQL = 300;
 
     static java.util.Map<Integer, String> TYPE_MAPPINGS;
     final private static Map<String, Set<String>> primaryKeys = new TreeMap<>();
@@ -58,6 +59,8 @@ final class SchemaUtil {
             return MSSQL;
         else if ("Oracle".equalsIgnoreCase(dbName))
             return ORACLE;
+        else if ("PostgreSQL".equalsIgnoreCase(dbName))
+            return POSTGRESQL;
 
         return 0;
     }
@@ -93,7 +96,6 @@ final class SchemaUtil {
     }
 
     static boolean isNumber(Object obj) {
-        return obj instanceof Integer || obj instanceof BigDecimal
-                || obj instanceof Double || obj instanceof Long;
+        return obj instanceof Integer || obj instanceof BigDecimal || obj instanceof Double || obj instanceof Long;
     }
 }

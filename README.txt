@@ -9,6 +9,10 @@ jLynx RELEASE NOTES
 jLynx CHANGE LOG
 ----------------
 
+v2.0.1 (Nov-2020)
+
+  - bug fixes
+
 v2.0.0 (Aug-2020)
 
   - Fields now instead of getter/setter properties, e.g. public Integer id
