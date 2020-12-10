@@ -518,7 +518,9 @@ public class DAOImpl implements DAO {
                 throw new RuntimeException(Table.class.getName() + " annotation missing from " + cls.getName());
             _entityName = cls.getAnnotation(Table.class).value();
             entityMap.put(cls.getName(), _entityName);
+
         }
+        _keys = null; // v202
     }
 
     private String getDbColumn(String prop) {
@@ -605,7 +607,6 @@ public class DAOImpl implements DAO {
         } finally {
             cleanup();
         }
-        //return result;
     }
 
     private void cleanup() throws SQLException {

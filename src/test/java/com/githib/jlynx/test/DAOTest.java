@@ -173,7 +173,26 @@ public class DAOTest extends TestCase {
     public void test_PKAnnotation() throws SQLException {
         dao.executeSql("CREATE TABLE T (ID VARCHAR(4))", null);
         dao.setBean(new TestPOJO()).select();
+    }
 
+    public void test_Postgre() {
+        DAO dao2 = DAOImpl.newInstance("jdbc:postgresql:gritchie", null);
+        Contact contact = new Contact();
+        contact.id = 1L;
+        dao2.setBean(contact);
+        try {
+            assertTrue(dao2.select());
+            assertTrue(contact.lastname.length() > 4);
+            Config config = new Config();
+            config.id = "xxx";
+            config.val2 = "480";
+            config.env = "xxx";
+            dao2.setBean(config);
+            dao2.select();
+        } catch (SQLException throwables) {
+            throwables.printStackTrace();
+            fail();
+        }
     }
 
 }
