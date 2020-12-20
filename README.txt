@@ -2,12 +2,19 @@ jLynx RELEASE NOTES
 -------------------
 
 1. Project hosted @ GitHub (2018).
-2. jLynx has no runtime dependencies. Logging is java.util.logging.
-3. jLynx requires JDK 1.8 and higher (Jul-2020).
+2. jLynx has 1 runtime dependency... SLF4J (logging).
+3. jLynx requires JDK 11 and higher (Dec-2020).
 
 
 jLynx CHANGE LOG
 ----------------
+
+v2.0.2 (Dec-2020)
+
+  - more bug fixes
+  - changes to support Kotlin data classes
+  - fields can be private, setters/getters are not used
+  - JDK 11 features used
 
 v2.0.1 (Nov-2020)
 

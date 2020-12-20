@@ -130,6 +130,10 @@ public class DAOImpl implements DAO {
                 case Types.FLOAT:
                     value = rs.getFloat(colIndex);
                     break;
+                case Types.BIT:
+                case Types.BOOLEAN:
+                    value = rs.getBoolean(colIndex);
+                    break;
                 default:
                     value = rs.getObject(colIndex);
             }

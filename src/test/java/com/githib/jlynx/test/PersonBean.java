@@ -11,7 +11,11 @@ import java.sql.Timestamp;
 public class PersonBean {
 
     @Column("ID")
-    public Integer PersonId;
+    private Integer personId;
+
+    public Integer getPersonId() {
+        return this.personId;
+    }
 
     @SuppressWarnings("unused")
     protected String Resume;

@@ -5,6 +5,12 @@ import com.github.jlynx.Table;
 @Table("contact")
 public class Contact {
 
-    public Long id;
+    private Integer id;
     public String lastname;
+    public Boolean active;
+
+    public Integer getId() {
+        return this.id;
+    }
+
 }

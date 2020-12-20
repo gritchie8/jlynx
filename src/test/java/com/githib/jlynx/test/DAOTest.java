@@ -75,7 +75,7 @@ public class DAOTest extends TestCase {
         }
 
         dao.executeSql("UPDATE PERSON SET IMAGE = ? WHERE ID = ?", new Object[]{inputStream,
-                person.PersonId});
+                person.getPersonId()});
         conn.commit();
         assertNull(person.Image);
         assertTrue(dao.select());
@@ -112,7 +112,7 @@ public class DAOTest extends TestCase {
         person = new PersonBean();
         person.FirstName = "Taylor";
         dao.setBean(person).insert();
-        assertTrue(person.PersonId > 1000);
+        assertTrue(person.getPersonId() > 1000);
         dao.delete();
     }
 
@@ -124,15 +124,15 @@ public class DAOTest extends TestCase {
             fail();
         } catch (RuntimeException re) {
             LoggerFactory.getLogger(getName()).info(re.getMessage());
-            assertNull(person2.PersonId);
+            assertNull(person2.getPersonId());
         }
     }
 
     public void test_InsertEmptyRecord() throws SQLException {
         person = new PersonBean();
-        assertNull(person.PersonId);
+        assertNull(person.getPersonId());
         dao.setBean(person).insert();
-        assertNotNull(person.PersonId);
+        assertNotNull(person.getPersonId());
     }
 
     public void test_Update() throws SQLException {
@@ -176,19 +176,33 @@ public class DAOTest extends TestCase {
     }
 
     public void test_Postgre() {
-        DAO dao2 = DAOImpl.newInstance("jdbc:postgresql:gritchie", null);
+        DAO dao2 = DAOImpl.newInstance("jdbc:postgresql:gregoryritchie", null);
         Contact contact = new Contact();
-        contact.id = 1L;
+        //contact.id = 1;
         dao2.setBean(contact);
+        contact.lastname = "Ritc";
         try {
+            dao2.insert();
             assertTrue(dao2.select());
-            assertTrue(contact.lastname.length() > 4);
-            Config config = new Config();
-            config.id = "xxx";
-            config.val2 = "480";
-            config.env = "xxx";
-            dao2.setBean(config);
-            dao2.select();
+            assertTrue(contact.lastname.length() > 2);
+            assertTrue(contact.active);
+            assertTrue(contact.getId() > 0);
+        } catch (SQLException throwables) {
+            throwables.printStackTrace();
+            fail();
+        }
+
+        Contact2 c2 = new Contact2();
+        assertNull(c2.getId());
+        c2.setLastName("Smith");
+        dao2.setBean(c2);
+        try {
+            dao2.insert();
+            assertTrue(c2.getId() > 0);
+            assertTrue(dao2.select());
+            assertNotNull(c2.getCreated());
+            assertTrue(c2.getActive());
+            assertNotNull(c2.getLastName());
         } catch (SQLException throwables) {
             throwables.printStackTrace();
             fail();

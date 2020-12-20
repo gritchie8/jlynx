@@ -5,6 +5,7 @@ import org.slf4j.LoggerFactory;
 import java.io.InputStream;
 import java.lang.reflect.Field;
 import java.sql.Timestamp;
+import java.util.Arrays;
 import java.util.HashMap;
 import java.util.Map;
 
@@ -16,7 +17,7 @@ class BeanUtil {
     private final static Map<Class<?>, Field[]> cache = new HashMap<>();
 
     static Field[] getFields(Class<?> targetClass) {
-        cache.computeIfAbsent(targetClass, Class::getFields);
+        cache.computeIfAbsent(targetClass, Class::getDeclaredFields);
         return cache.get(targetClass);
     }
 
@@ -27,14 +28,16 @@ class BeanUtil {
 
         Map<String, Object> retMap = new HashMap<>();
 
-        for (Field field : getFields(target.getClass())) {
+        Arrays.stream(getFields(target.getClass())).filter(field -> field.trySetAccessible()).forEach(field -> {
+
             try {
                 if (!field.isAnnotationPresent(Column.class) || field.getAnnotation(Column.class).include())
                     retMap.put(field.getName(), field.get(target));
             } catch (IllegalAccessException e) {
-                e.printStackTrace();
+                LoggerFactory.getLogger("jlynx").error(e.getMessage(), e);
             }
-        }
+
+        });
 
         return retMap;
     }
@@ -99,27 +102,27 @@ class BeanUtil {
 
             Field fieldToSet = getFieldIgnoreCase(target, propertyOrColumn);
 
-            try {
-                if (value instanceof java.sql.Timestamp &&
-                        fieldToSet.getType().getCanonicalName().equalsIgnoreCase("java.sql.Date")) {
-                    long time = ((Timestamp) value).getTime();
-                    fieldToSet.set(target, new java.sql.Date(time));
-                } else {
-                    if (value == null || fieldToSet.getType().isAssignableFrom(value.getClass()))
+            if (fieldToSet == null)
+                LoggerFactory.getLogger("jlynx").warn(target.getClass().getName()
+                        + " - no property found for database column: " + propertyOrColumn);
+            else if (fieldToSet.trySetAccessible())
+                try {
+                    if (value instanceof java.sql.Timestamp &&
+                            fieldToSet.getType().getCanonicalName().equalsIgnoreCase("java.sql.Date")) {
+                        long time = ((Timestamp) value).getTime();
+                        fieldToSet.set(target, new java.sql.Date(time));
+                    } else if (value == null ||
+                            fieldToSet.getType().isPrimitive() ||
+                            fieldToSet.getType().isAssignableFrom(value.getClass()))
                         fieldToSet.set(target, value);
+
+
+                } catch (IllegalAccessException | IllegalArgumentException e) {
+                    LoggerFactory.getLogger("jlynx").error(e.getMessage(), e);
                 }
 
-            } catch (NullPointerException | IllegalAccessException | IllegalArgumentException e) {
-                if (LoggerFactory.getLogger("jlynx").isTraceEnabled())
-                    LoggerFactory.getLogger("jlynx").trace("value = " + value);
-                if (!(e instanceof NullPointerException))
-                    LoggerFactory.getLogger("jlynx").error(e.getMessage());
-                LoggerFactory.getLogger("jlynx").warn("'" + propertyOrColumn + "' not set on: "
-                        + target.getClass().getCanonicalName() + ". Is the field missing?");
-            }
-
         } else
-            LoggerFactory.getLogger("jlynx").warn(propertyOrColumn + " could not be set, not an expected type");
+            LoggerFactory.getLogger("jlynx").warn(propertyOrColumn + " could not be set, value not an expected type");
 
     }
 
