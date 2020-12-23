@@ -687,32 +687,15 @@ public class DAOImpl implements DAO {
     public void save() throws SQLException {
 
         connect();
-        String filter;
-        try {
-            filter = createFilterStmt();
-        } catch (IllegalArgumentException e) {
-            _logger.trace("#save - insert new record");
-            insert();
-            return;
-        }
-        // 1. find out if object exists in DB first
-        // 2. if(exists) update else insert
-        StringBuilder select = new StringBuilder("SELECT ");
-        select.append(getDbColumn(_keys.iterator().next()));
-        select.append(" FROM ").append(getEntity()).append(filter);
-        _stmt = _conn.createStatement();
-        _rs = _stmt.executeQuery(select.toString());
-        if (_logger.isTraceEnabled())
-            _logger.trace(select.toString());
-        boolean doUpdate = _rs.next();
 
-        if (doUpdate) {
+        try {
+            String filter = createFilterStmt();
             if (_logger.isDebugEnabled())
-                _logger.debug("#save - updating existing record");
+                _logger.debug("#save - update existing record");
             update();
-        } else {
-            if (_logger.isTraceEnabled())
-                _logger.trace("#save - insert new record");
+        } catch (RuntimeException e) {
+            if (_logger.isDebugEnabled())
+                _logger.debug("#save - insert new record");
             insert();
         }
     }
