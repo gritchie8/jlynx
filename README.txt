@@ -12,6 +12,7 @@ jLynx CHANGE LOG
 v2.0.2 (Dec-2020)
 
   - more bug fixes
+  - connection pool connections not closed
   - changes to support Kotlin data classes
   - fields can be private, setters/getters are not used
   - JDK 11 features used

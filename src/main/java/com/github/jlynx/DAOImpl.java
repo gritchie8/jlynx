@@ -36,6 +36,7 @@ public class DAOImpl implements DAO {
     private Statement _stmt;
 
     private String _cnUrl;
+    private boolean _managedConnection;
 
     private DAOImpl() {
         if (_logger.isTraceEnabled())
@@ -52,6 +53,7 @@ public class DAOImpl implements DAO {
     public static DAO newInstance(Connection connection) {
         DAOImpl dao = new DAOImpl();
         dao._conn = connection;
+        dao._managedConnection = true;
         return dao;
     }
 
@@ -165,7 +167,7 @@ public class DAOImpl implements DAO {
     }
 
     private void connect() throws SQLException {
-        if (_conn == null || _conn.isClosed()) {
+        if (!_managedConnection && (_conn == null || _conn.isClosed())) {
             if (_cnUrl != null && _cnUrl.length() > 1)
                 _conn = DriverManager.getConnection(_cnUrl, _cnProps);
             else if (_dsName != null)
@@ -216,7 +218,7 @@ public class DAOImpl implements DAO {
             } catch (SQLException e) {
                 // check for Column pk annotation
                 _keys = new HashSet<>();
-                for (Field f : this._bean.getClass().getFields()) {
+                for (Field f : BeanUtil.getFields(_bean.getClass())) {
                     if (f.isAnnotationPresent(Column.class) && f.getAnnotation(Column.class).pk())
                         _keys.add(f.getAnnotation(Column.class).value());
                 }
@@ -232,11 +234,17 @@ public class DAOImpl implements DAO {
         for (String key : _keys) {
 
             sql.append(and).append(getDbColumn(key));
-            final Object partKeyValue = BeanUtil.getValue(key, _bean);
+            Object partKeyValue = null;
+            try {
+                partKeyValue = BeanUtil.getValue(key, _bean);
+            } catch (IllegalAccessException e) {
+                _logger.error(e.getMessage());
+            } finally {
 
-            if (partKeyValue == null) {
-                String message = "Primary key value empty for database column: " + key + ", object: " + _bean.getClass().getName();
-                throw new IllegalArgumentException(message);
+                if (partKeyValue == null) {
+                    String message = "Primary key value empty for database column: " + key + ", object: " + _bean.getClass().getName();
+                    throw new IllegalArgumentException(message);
+                }
             }
 
             String delimiter = SchemaUtil.isNumber(partKeyValue) ? "" : "'";
@@ -317,7 +325,12 @@ public class DAOImpl implements DAO {
 
             }
 
-            Object field = BeanUtil.getValue(fields[j], obj);
+            Object field = null;
+            try {
+                field = BeanUtil.getValue(fields[j], obj);
+            } catch (IllegalAccessException e) {
+                _logger.error(e.getMessage());
+            }
             delimiter = (SchemaUtil.isNumber(field)) ? "" : "'";
 
             j++;
@@ -401,7 +414,12 @@ public class DAOImpl implements DAO {
                     // MSSQL fix for Bits/Boolean
                     if (Boolean.class.equals(cls)) {
 
-                        Boolean valB = (Boolean) BeanUtil.getValue(colName, _bean);
+                        Boolean valB = null;
+                        try {
+                            valB = (Boolean) BeanUtil.getValue(colName, _bean);
+                        } catch (IllegalAccessException e) {
+                            _logger.error(e.getMessage());
+                        }
 
                         if (valB == null)
                             value = null;
@@ -420,10 +438,14 @@ public class DAOImpl implements DAO {
 
                 // do fix here for DB2 numeric types
                 String delimiter;
-                if (SchemaUtil.isNumber(BeanUtil.getValue(colName, _bean))) {
-                    delimiter = "";
-                } else
+                try {
+                    if (SchemaUtil.isNumber(BeanUtil.getValue(colName, _bean))) {
+                        delimiter = "";
+                    } else
+                        delimiter = "'";
+                } catch (IllegalAccessException e) {
                     delimiter = "'";
+                }
 
                 sql.append(getDbColumn(colName)).append(" = ").append(oracleDate1).append(delimiter)
                         .append(value).append(delimiter).append(oracleDate2);
@@ -529,15 +551,10 @@ public class DAOImpl implements DAO {
 
     private String getDbColumn(String prop) {
 
-        // handle Column annotation; here new to 1.8.0
-        for (Field field : BeanUtil.getFields(_bean.getClass())) {
-            if (field.getName().equalsIgnoreCase(prop)) {
-                if (!field.isAnnotationPresent(Column.class))
-                    return prop.toUpperCase();
-                else
-                    return field.getAnnotation(Column.class).value();
-            }
-        }
+        for (Field field : BeanUtil.getFields(_bean.getClass()))
+            if (field.getName().equalsIgnoreCase(prop))
+                return field.isAnnotationPresent(Column.class) ?
+                        field.getAnnotation(Column.class).value() : prop.toUpperCase();
 
         return prop.toUpperCase();
     }
@@ -614,6 +631,9 @@ public class DAOImpl implements DAO {
     }
 
     private void cleanup() throws SQLException {
+
+        if (_managedConnection || (_conn != null && !_conn.isClosed()))
+            return;
 
         if (_conn != null && !_conn.getAutoCommit()) {
             _logger.warn("#cleanup not executed - auto commit is off");

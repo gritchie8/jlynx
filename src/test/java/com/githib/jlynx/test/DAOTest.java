@@ -2,7 +2,12 @@ package com.githib.jlynx.test;
 
 import com.github.jlynx.DAO;
 import com.github.jlynx.DAOImpl;
-import junit.framework.TestCase;
+import com.zaxxer.hikari.HikariConfig;
+import com.zaxxer.hikari.HikariDataSource;
+import data.Contact2;
+import org.junit.After;
+import org.junit.Before;
+import org.junit.Test;
 import org.slf4j.LoggerFactory;
 
 import java.io.File;
@@ -13,20 +18,42 @@ import java.sql.Connection;
 import java.sql.Date;
 import java.sql.SQLException;
 import java.sql.Timestamp;
-import java.util.Calendar;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 
-public class DAOTest extends TestCase {
+import static org.junit.Assert.*;
+
+public class DAOTest {
 
     private PersonBean person;
     private DAO dao;
 
+    @Before
+    public void beforeTestMethod() {
 
-    @Override
-    public void setUp() {
-        dao = DAOImpl.newInstance("jdbc:hsqldb:mem:/jlynxdb", null);
+        if (dao == null)
+            try {
+                HikariConfig config = new HikariConfig();
+                Properties dsProps = new Properties();
+                dsProps.put("url", "jdbc:hsqldb:mem:jlynx_db");
+                config.setDataSourceProperties(dsProps);
+                config.setUsername("");
+                config.setPassword("");
+                config.setDataSourceClassName("org.hsqldb.jdbc.JDBCDataSource");
+                HikariDataSource ds = new HikariDataSource(config);
+                dao = DAOImpl.newInstance(ds.getConnection());
+            } catch (SQLException throwables) {
+                throwables.printStackTrace();
+                fail();
+            }
+        else {
+            try {
+                assertNotNull(dao.getConnection());
+            } catch (SQLException throwables) {
+                throwables.printStackTrace();
+                fail();
+            }
+        }
+
         person = new PersonBean();
 
         try {
@@ -41,21 +68,35 @@ public class DAOTest extends TestCase {
                     " AMT DECIMAL(10,2) DEFAULT 0.00," +
                     " LASTNAME VARCHAR(30)," +
                     " firstname varchar(10))";
-            assertFalse(dao.executeSql(ddl, null));
+
             assertNotNull(dao.getConnection());
+            assertFalse(dao.executeSql(ddl, null));
+
         } catch (SQLException e) {
-            e.printStackTrace();
-            fail();
+            LoggerFactory.getLogger("jlynx").warn(e.getMessage());
         }
     }
 
-    @Override
-    public void tearDown() throws SQLException {
-        dao.executeSql("DROP TABLE IF EXISTS PERSON", null);
+
+    @After
+    public void afterTestMethod() {
+        LoggerFactory.getLogger("jlynx").info("#afterTestMethod - start");
+        if (dao != null)
+            try {
+                assertNotNull(dao.getConnection());
+                dao.executeSql("DROP TABLE IF EXISTS PERSON", null);
+                dao.getConnection().close();
+            } catch (SQLException exception) {
+                exception.printStackTrace();
+                fail();
+            } finally {
+                dao = null;
+                LoggerFactory.getLogger("jlynx").info("#afterTestMethod - done");
+            }
     }
 
-
-    public void test_UpdateBLOB() throws Exception {
+    @Test
+    public void updateBLOB() throws Exception {
 
         InputStream inputStream = getClass().getResourceAsStream("/Creissels_et_Viaduct_de_Millau.jpg");
         person.SurName = "Smith";
@@ -90,11 +131,11 @@ public class DAOTest extends TestCase {
         outStream.write(buffer);
         assertTrue(file.length() > 5000000);
         assertTrue(file.delete());
-        conn.close();
     }
 
     @SuppressWarnings("unchecked")
-    public void test_List() throws Exception {
+    @Test
+    public void list() throws Exception {
 
         dao.setBean(person).save();
         person = new PersonBean();
@@ -116,26 +157,29 @@ public class DAOTest extends TestCase {
         dao.delete();
     }
 
-    public void test_TableAnnotation() throws SQLException {
+    @Test
+    public void tableAnnotation() throws SQLException {
         Person person2 = new Person();
         person2.FirstName = ("Joe");
         try {
             dao.setBean(person2).insert();
             fail();
         } catch (RuntimeException re) {
-            LoggerFactory.getLogger(getName()).info(re.getMessage());
+            LoggerFactory.getLogger(getClass()).info(re.getMessage());
             assertNull(person2.getPersonId());
         }
     }
 
-    public void test_InsertEmptyRecord() throws SQLException {
+    @Test
+    public void insertEmptyRecord() throws SQLException {
         person = new PersonBean();
         assertNull(person.getPersonId());
         dao.setBean(person).insert();
         assertNotNull(person.getPersonId());
     }
 
-    public void test_Update() throws SQLException {
+    @Test
+    public void update() throws SQLException {
         person = new PersonBean();
         dao.setBean(person).insert();
         person.FirstName = ("Lewis");
@@ -147,7 +191,8 @@ public class DAOTest extends TestCase {
         LoggerFactory.getLogger(DAOTest.class).info("Amt = " + person.Amt);
     }
 
-    public void test_SetBean2() throws SQLException {
+    @Test
+    public void setBean2() throws SQLException {
         Map<String, String> params = new HashMap<>();
         params.put("surName", "Hamilton");
         params.put("age2", "621");
@@ -158,6 +203,7 @@ public class DAOTest extends TestCase {
     }
 
     @SuppressWarnings("deprecation")
+    @Test
     public void test_Col2() throws SQLException {
         person.DateOfBirth = (new java.sql.Date(88, Calendar.JULY, 27));
         person.SurName = "Ritc";
@@ -167,23 +213,24 @@ public class DAOTest extends TestCase {
         person.WeightInKg = 70;
         dao.update();
         dao.delete();
-        dao.getConnection().close();
     }
 
-    public void test_PKAnnotation() throws SQLException {
+    @Test
+    public void primaryKeyAnnotation() throws SQLException {
         dao.executeSql("CREATE TABLE T (ID VARCHAR(4))", null);
         dao.setBean(new TestPOJO()).select();
     }
 
-    public void test_Postgre() {
-        DAO dao2 = DAOImpl.newInstance("jdbc:postgresql:gregoryritchie", null);
+    @Test
+    public void postgre() {
+        dao = DAOImpl.newInstance("jdbc:postgresql:gregoryritchie", null);
         Contact contact = new Contact();
         //contact.id = 1;
-        dao2.setBean(contact);
+        dao.setBean(contact);
         contact.lastname = "Ritc";
         try {
-            dao2.insert();
-            assertTrue(dao2.select());
+            dao.insert();
+            assertTrue(dao.select());
             assertTrue(contact.lastname.length() > 2);
             assertTrue(contact.active);
             assertTrue(contact.getId() > 0);
@@ -194,18 +241,21 @@ public class DAOTest extends TestCase {
 
         Contact2 c2 = new Contact2();
         assertNull(c2.getId());
-        c2.setLastName("Smith");
-        dao2.setBean(c2);
+        c2.setSurName("Smith");
+        dao.setBean(c2);
         try {
-            dao2.insert();
+            dao.insert();
             assertTrue(c2.getId() > 0);
-            assertTrue(dao2.select());
+            assertTrue(dao.select());
             assertNotNull(c2.getCreated());
             assertTrue(c2.getActive());
-            assertNotNull(c2.getLastName());
+            assertNotNull(c2.getSurName());
+            dao.getConnection().close();
         } catch (SQLException throwables) {
             throwables.printStackTrace();
             fail();
+        } finally {
+            dao = null;
         }
     }
 

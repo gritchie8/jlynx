@@ -51,18 +51,17 @@ class BeanUtil {
     /**
      * This method performs in a case-insensitive manner
      */
-    static Object getValue(String property, Object target) {
+    static Object getValue(String property, Object target) throws IllegalAccessException {
 
         Field fieldToGet = getFieldIgnoreCase(target, property);
 
         try {
+            fieldToGet.setAccessible(true);
             return fieldToGet.get(target);
-        } catch (NullPointerException | IllegalAccessException e) {
-            e.printStackTrace();
+        } catch (IllegalAccessException e) {
+            LoggerFactory.getLogger("jlynx").error(e.getMessage(), e);
+            throw e;
         }
-
-        return null;
-
     }
 
     static void setValueFromString(Object bean, String property, String value) {
