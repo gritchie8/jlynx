@@ -25,13 +25,14 @@ import static org.junit.Assert.*;
 public class DAOTest {
 
     private PersonBean person;
-    private DAO dao;
+    private static DAO dao;
 
     @Before
     public void beforeTestMethod() {
 
         if (dao == null)
             try {
+                LoggerFactory.getLogger("jlynx").info("Creating new DAO");
                 HikariConfig config = new HikariConfig();
                 Properties dsProps = new Properties();
                 dsProps.put("url", "jdbc:hsqldb:mem:jlynx_db");
@@ -70,6 +71,7 @@ public class DAOTest {
                     " firstname varchar(10))";
 
             assertNotNull(dao.getConnection());
+            dao.getConnection().setAutoCommit(false);
             assertFalse(dao.executeSql(ddl, null));
 
         } catch (SQLException e) {
@@ -85,12 +87,12 @@ public class DAOTest {
             try {
                 assertNotNull(dao.getConnection());
                 dao.executeSql("DROP TABLE IF EXISTS PERSON", null);
-                dao.getConnection().close();
+                // dao.getConnection().close();
             } catch (SQLException exception) {
                 exception.printStackTrace();
                 fail();
             } finally {
-                dao = null;
+                // dao = null;
                 LoggerFactory.getLogger("jlynx").info("#afterTestMethod - done");
             }
     }
@@ -135,9 +137,10 @@ public class DAOTest {
 
     @SuppressWarnings("unchecked")
     @Test
-    public void list() throws Exception {
+    public void list() throws Throwable {
 
         dao.setBean(person).save();
+
         person = new PersonBean();
         dao.setBean(person).save();
 
