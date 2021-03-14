@@ -12,4 +12,6 @@ public @interface Column {
 
     boolean pk() default false;
 
+    boolean fk() default false;
+
 }

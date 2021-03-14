@@ -1,55 +1,33 @@
 // jlynx project - gradle build
 
 apply plugin: 'java'
-apply plugin: 'kotlin'
-apply plugin: 'idea'
+//apply plugin: 'kotlin'
+//apply plugin: 'idea'
 
 repositories {
-    jcenter()
+    //jcenter()
+    mavenCentral()
 }
 
 dependencies {
 
-    // added Jul-2020
     implementation "org.slf4j:slf4j-api:1.7.30"
 
-    testRuntime 'org.apache.logging.log4j:log4j-slf4j-impl:2.14.0'
-
+    testImplementation group: 'org.slf4j', name: 'slf4j-jdk14', version: '1.7.30'
     testImplementation "junit:junit:4.13.1"
 
     // jdbc drivers
     testRuntime "org.hsqldb:hsqldb:2.5.1"
 
     //testRuntime("com.h2database:h2:1.4.197")
-    testRuntime "com.microsoft.sqlserver:mssql-jdbc:8.3.1.jre8-preview"
-    testRuntime "org.postgresql:postgresql:42.2.11"
-    implementation "org.jetbrains.kotlin:kotlin-stdlib-jdk8:$kotlin_version"
+    //testRuntime "com.microsoft.sqlserver:mssql-jdbc:8.3.1.jre8-preview"
+    //testRuntime "org.postgresql:postgresql:42.2.11"
+    //testImplementation "org.jetbrains.kotlin:kotlin-stdlib-jdk8:$kotlin_version"
     //testRuntime("mysql:mysql-connector-java:8.0.11")
 
-    testImplementation 'com.zaxxer:HikariCP:3.4.5'
+    //testImplementation 'com.zaxxer:HikariCP:3.4.5'
 }
 
 sourceCompatibility = '1.8'
 targetCompatibility = '1.8'
-version = "2.0.2" //jlynx version
-
-    buildscript {
-        ext.kotlin_version = '1.4.21'
-        repositories {
-            mavenCentral()
-        }
-        dependencies {
-            classpath "org.jetbrains.kotlin:kotlin-gradle-plugin:$kotlin_version"
-        }
-    }
-
-    compileKotlin {
-        kotlinOptions {
-            jvmTarget = "11"
-        }
-    }
-    compileTestKotlin {
-        kotlinOptions {
-            jvmTarget = "11"
-        }
-    }
+version = "2.1.1" //jlynx version

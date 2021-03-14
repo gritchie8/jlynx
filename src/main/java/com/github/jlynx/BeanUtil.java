@@ -31,7 +31,8 @@ class BeanUtil {
         Arrays.stream(getFields(target.getClass())).filter(field -> field.trySetAccessible()).forEach(field -> {
 
             try {
-                if (!field.isAnnotationPresent(Column.class) || field.getAnnotation(Column.class).include())
+                if (!field.isAnnotationPresent(Column.class)
+                        || (field.getAnnotation(Column.class).include() && !field.getAnnotation(Column.class).fk()))
                     retMap.put(field.getName(), field.get(target));
             } catch (IllegalAccessException e) {
                 LoggerFactory.getLogger("jlynx").error(e.getMessage(), e);
@@ -102,19 +103,19 @@ class BeanUtil {
             Field fieldToSet = getFieldIgnoreCase(target, propertyOrColumn);
 
             if (fieldToSet == null)
-                LoggerFactory.getLogger("jlynx").warn(target.getClass().getName()
-                        + " - no property found for database column: " + propertyOrColumn);
+                LoggerFactory.getLogger("jlynx")
+                        .warn(target.getClass().getSimpleName() + "#" + propertyOrColumn + " - no property exists");
             else if (fieldToSet.trySetAccessible())
                 try {
-                    if (value instanceof java.sql.Timestamp &&
-                            fieldToSet.getType().getCanonicalName().equalsIgnoreCase("java.sql.Date")) {
+                    if (value instanceof java.sql.Timestamp
+                            && fieldToSet.getType().getCanonicalName().equals("java.sql.Date")) {
                         long time = ((Timestamp) value).getTime();
                         fieldToSet.set(target, new java.sql.Date(time));
-                    } else if (value == null ||
-                            fieldToSet.getType().isPrimitive() ||
-                            fieldToSet.getType().isAssignableFrom(value.getClass()))
+                    } else if (value == null || fieldToSet.getType().isPrimitive()
+                            || fieldToSet.getType().isAssignableFrom(value.getClass()))
                         fieldToSet.set(target, value);
-
+                    else LoggerFactory.getLogger("jlynx").warn(target.getClass().getSimpleName() + "#"
+                                + fieldToSet.getName() + " not set");
 
                 } catch (IllegalAccessException | IllegalArgumentException e) {
                     LoggerFactory.getLogger("jlynx").error(e.getMessage(), e);
