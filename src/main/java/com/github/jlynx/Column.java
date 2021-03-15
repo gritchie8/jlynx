@@ -6,12 +6,12 @@ import java.lang.annotation.RetentionPolicy;
 @Retention(RetentionPolicy.RUNTIME)
 public @interface Column {
 
-    String value() default "";
+  String value() default "";
 
-    boolean include() default true;
+  boolean include() default true;
 
-    boolean pk() default false;
+  boolean pk() default false;
 
-    boolean fk() default false;
+  boolean fk() default false;
 
 }

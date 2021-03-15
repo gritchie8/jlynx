@@ -5,42 +5,40 @@ package com.github.jlynx;
  */
 final class StringUtil {
 
+  static String escapeQuotes(String str) {
 
-    static String escapeQuotes(String str) {
-
-        if (str != null) {
-            return replace(str, "'", "''");
-            // jdk 1.3 issue str.replaceAll("'", "''");
-        } else {
-            return null;
-        }
-
+    if (str != null) {
+      return replace(str, "'", "''");
+      // jdk 1.3 issue str.replaceAll("'", "''");
+    } else {
+      return null;
     }
 
-    @SuppressWarnings("all")
-    static String replace(String source, String pattern, String replace) {
-        if (source != null) {
-            final int len = pattern.length();
-            StringBuilder sb = new StringBuilder();
-            int found = -1;
-            int start = 0;
+  }
 
-            while ((found = source.indexOf(pattern, start)) != -1) {
-                sb.append(source.substring(start, found));
-                sb.append(replace);
-                start = found + len;
-            }
+  @SuppressWarnings("all")
+  static String replace(String source, String pattern, String replace) {
+    if (source != null) {
+      final int len = pattern.length();
+      StringBuilder sb = new StringBuilder();
+      int found = -1;
+      int start = 0;
 
-            sb.append(source.substring(start));
+      while ((found = source.indexOf(pattern, start)) != -1) {
+        sb.append(source.substring(start, found));
+        sb.append(replace);
+        start = found + len;
+      }
 
-            return sb.toString();
-        } else
-            return "";
-    }
+      sb.append(source.substring(start));
 
+      return sb.toString();
+    } else
+      return "";
+  }
 
-    static String fixNulls(String sqlIn) {
-        return replace(sqlIn, "'null'", "NULL");
-    }
+  static String fixNulls(String sqlIn) {
+    return replace(sqlIn, "'null'", "NULL");
+  }
 
 }

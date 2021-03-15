@@ -38,18 +38,19 @@ public interface DAO {
   /**
    * Returns a list of objects from the database.
    *
-   * @param resultClass Class literal to store results
+   * @param resultClass class literal to store results
    * @param query       SQL statement
    * @param params      SQL statement parameters (see java.sql.PreparedStatement)
    * @return List
-   * @throws SQLException           - database exception
-   * @throws IllegalAccessException - exception
-   * @throws InstantiationException - exception
+   * @throws ReflectiveOperationException Common superclass of exceptions thrown
+   *                                      by reflective operations in core
+   *                                      reflection.
+   * @throws SQLException                 database exception
    * @see java.sql.PreparedStatement#executeQuery()
    * @since v1.3
    */
-  <T> List<T> getList(Class<T> resultClass, String query, Object[] params)
-      throws SQLException, IllegalAccessException, InstantiationException;
+  <T> List<T> listOf(Class<T> resultClass, String query, Object[] params)
+      throws SQLException, ReflectiveOperationException;
 
   /**
    * Inserts single row into a database.
@@ -95,7 +96,7 @@ public interface DAO {
 
   /**
    * Sets the object to be used in database transactions.
-   * <p>
+   * 
    * Object MUST have a com.github.jlynx.Table annotation. (v1.8+)
    *
    * @param bean POJO, with a @Table annotation
@@ -106,9 +107,9 @@ public interface DAO {
 
   /**
    * Sets the object to be used in database transactions.
-   * <p>
+   * 
    * Parameters will be set on the properties or at least attempted.
-   * <p>
+   * 
    * Object MUST have a @Table annotation.
    *
    * @param bean       POJO, with a @Table annotation

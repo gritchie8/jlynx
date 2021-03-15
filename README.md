@@ -8,12 +8,16 @@ jLynx RELEASE NOTES
 jLynx CHANGE LOG
 ----------------
 
-##### v2.1.0 (Feb-2020)
+#### v2.2 (Mar-21)
+    - renamed getList to listOf and adjusted throws to ReflectiveOperationException, SQLException
+    - get fields from super classes more in a more reliable fashion
+
+##### v2.1.0 (Feb-21)
 
     - tweaked getList() to make use of generic & avoid unchecked warnings at compile time
     - java.time.LocalDate/LocalDateTime prioritzed over java.sql.Date/java.sql.Timestamp
 
-###### v2.0.2 (Dec-2020)
+###### v2.0.2 (Dec-20)
 
     - more bug fixes
     - connection pool connections not closed
