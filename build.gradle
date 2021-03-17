@@ -11,6 +11,7 @@ dependencies {
 
     testImplementation group: 'org.slf4j', name: 'slf4j-jdk14', version: '1.7.30'
     testImplementation 'junit:junit:4.13.1'
+    testImplementation group: 'org.eclipse', name: 'yasson', version: '2.0.1'
 
     // jdbc drivers
     testRuntime 'org.hsqldb:hsqldb:2.5.1'

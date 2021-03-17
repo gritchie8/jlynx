@@ -8,9 +8,12 @@ jLynx RELEASE NOTES
 jLynx CHANGE LOG
 ----------------
 
-#### v2.2 (Mar-21)
+#### v2.2.0 (Mar-21)
     - renamed getList to listOf and adjusted throws to ReflectiveOperationException, SQLException
-    - get fields from super classes more in a more reliable fashion
+    - getFields responds in a more reliable fashion, excluding Collection types, interfaces and arrays without an annotation
+    - adjusted Column and Table annotations to add Target elements (Type for Table, Field for Column)
+    - removed 'include' option for Column, mark eligible fields with @Exclude annotation to exclude from database operations
+    - removed #setBean(), that took a Map as a parameter
 
 ##### v2.1.0 (Feb-21)
 

@@ -2,7 +2,6 @@ package com.github.jlynx;
 
 import java.sql.SQLException;
 import java.util.List;
-import java.util.Map;
 
 /**
  * This interface defines methods to persist and retrieve POJOs from relational
@@ -104,20 +103,6 @@ public interface DAO {
    * @since v1.7.0
    */
   DAO setBean(Object bean);
-
-  /**
-   * Sets the object to be used in database transactions.
-   * 
-   * Parameters will be set on the properties or at least attempted.
-   * 
-   * Object MUST have a @Table annotation.
-   *
-   * @param bean       POJO, with a @Table annotation
-   * @param parameters Parameters key/value pairs as Strings
-   * @return DAO
-   * @since v1.9.0
-   */
-  DAO setBean(Object bean, Map<String, String> parameters);
 
   /**
    * The current connection.

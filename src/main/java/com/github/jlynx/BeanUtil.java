@@ -20,17 +20,26 @@ class BeanUtil {
 
   static Field[] getFields(final Class<?> targetClass) {
 
-    cache.computeIfAbsent(targetClass, k -> targetClass.getFields());
-    /*
-     * cache.computeIfAbsent(targetClass, k -> {
-     * 
-     * List<Field> fields = new ArrayList<>(); Class<?> class1 = targetClass; while
-     * (class1 != Object.class) {
-     * fields.addAll(Arrays.asList(class1.getDeclaredFields())); class1 =
-     * class1.getSuperclass(); } return fields.toArray(new Field[fields.size()]);
-     * 
-     * });
-     */
+    // cache.computeIfAbsent(targetClass, k -> targetClass.getFields());
+    cache.computeIfAbsent(targetClass, k -> {
+
+      List<Field> fields = new ArrayList<>();
+      Class<?> class1 = targetClass;
+      while (class1 != Object.class) {
+        for (Field field : class1.getDeclaredFields()) {
+
+          if (!field.trySetAccessible() || field.isAnnotationPresent(Exclude.class) || field.getType().isArray()
+              || java.util.Collection.class.isAssignableFrom(field.getType()) || field.getType().isInterface())
+            continue;
+          else
+            fields.add(field);
+        }
+        class1 = class1.getSuperclass();
+      }
+      return fields.toArray(new Field[fields.size()]);
+
+    });
+
     return cache.get(targetClass);
   }
 
@@ -41,12 +50,10 @@ class BeanUtil {
 
     Map<String, Object> retMap = new HashMap<>();
 
-    Arrays.stream(getFields(target.getClass())).filter(field -> field.trySetAccessible()).forEach(field -> {
+    Arrays.stream(getFields(target.getClass())).filter(field -> field.canAccess(target)).forEach(field -> {
 
       try {
-        if (!field.isAnnotationPresent(Column.class)
-            || (field.getAnnotation(Column.class).include() && !field.getAnnotation(Column.class).fk()))
-          retMap.put(field.getName(), field.get(target));
+        retMap.put(field.getName(), field.get(target));
       } catch (IllegalAccessException e) {
         LoggerFactory.getLogger("jlynx").error(e.getMessage(), e);
       }

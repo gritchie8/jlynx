@@ -239,16 +239,8 @@ public class DAOImpl implements DAO {
       } catch (SQLException e) {
         // check for Column pk annotation
         _keys = new HashSet<>();
-        for (Field f : BeanUtil.getFields(_bean.getClass())) {
-          if (f.isAnnotationPresent(Column.class) && f.getAnnotation(Column.class).pk())
-            _keys.add(f.getAnnotation(Column.class).value());
-        }
-        if (_keys.isEmpty()) {
-          _logger.error(e.getMessage());
-          throw new IllegalStateException(
-              "Primary key not on the table, or annotated correctly on class " + this._bean.getClass().getName());
-        }
-        _logger.warn("Using column annotation on table without a PK");
+        _logger.error(e.getMessage());
+        throw new IllegalStateException("Primary key not found " + this._entityName);
       }
     }
 
@@ -756,25 +748,6 @@ public class DAOImpl implements DAO {
     }
   }
 
-  /**
-   * java.sql.Date and java.sql.Timestamp must be converted to longs (time in
-   * millis) to be set
-   *
-   * @param bean       POJO, with a @Table annotation
-   * @param parameters Parameters key/value pairs as Strings
-   * @return DAO DAO interface
-   */
-  @Override
-  public DAO setBean(Object bean, Map<String, String> parameters) {
-    this._bean = bean;
-    setEntity(bean.getClass());
-
-    for (String key : parameters.keySet())
-      BeanUtil.setValueFromString(_bean, key, parameters.get(key));
-
-    return this;
-  }
-
   @Override
   public DAO setBean(Object bean) {
     _bean = bean;
@@ -806,12 +779,16 @@ public class DAOImpl implements DAO {
   @Override
   public final int update() throws SQLException {
     connect();
+    String sql = createUpdateStmt();
     try {
-      String sql = createUpdateStmt();
+
       _stmt = _conn.createStatement();
       if (_logger.isDebugEnabled())
         _logger.debug("#update - " + sql);
       return _stmt.executeUpdate(sql);
+    } catch (SQLException sqle) {
+      _logger.error(sql);
+      throw sqle;
     } finally {
       cleanup();
     }
