@@ -8,7 +8,7 @@ jLynx RELEASE NOTES
 jLynx CHANGE LOG
 ----------------
 
-#### v2.2.0 (Mar-21)
+#### v2.2.0 (Apr-21)
     - renamed getList to listOf and adjusted throws to ReflectiveOperationException, SQLException
     - getFields responds in a more reliable fashion, excluding Collection types, interfaces and arrays without an annotation
     - adjusted Column and Table annotations to add Target elements (Type for Table, Field for Column)

@@ -20,6 +20,7 @@ import jakarta.json.bind.JsonbBuilder;
 public class DAOTest {
 
   private DAO dao;
+  private DAO dao2;
   private Logger logger = LoggerFactory.getLogger("jlynx");
 
   @Before
@@ -27,13 +28,17 @@ public class DAOTest {
 
     logger.info("Creating new DAO");
     dao = DAOImpl.newInstance("jdbc:hsqldb:mem:jlynx", null);
+    dao2 = DAOImpl.newInstance("jdbc:postgresql:contact_acme", null);
     assertNotNull(dao.getConnection());
     String ddl = "CREATE TABLE FRUIT ( ID INT PRIMARY KEY, NAME VARCHAR(20), COLOR VARCHAR(10), PRICE DECIMAL(10,2) DEFAULT 10.35,"
         + " PICKED DATE DEFAULT CURRENT_DATE, NOW TIMESTAMP DEFAULT CURRENT_TIMESTAMP )";
     dao.getConnection().setAutoCommit(false);
+    dao2.getConnection();
     int rows = dao.executeSql(ddl, null);
     logger.info("rows = " + rows);
     assertNotNull(dao.getConnection());
+    ddl = "CREATE TABLE TEST1 (ID SERIAL PRIMARY KEY, DATA JSONB DEFAULT '{}')";
+    dao2.executeSql(ddl, null);
 
   }
 
@@ -41,7 +46,7 @@ public class DAOTest {
   public void afterTestMethod() throws SQLException {
     logger.info("#afterTestMethod - start");
     dao.executeSql("DROP TABLE FRUIT", null);
-
+    dao2.executeSql("DROP TABLE TEST1", null);
   }
 
   @Test
@@ -72,6 +77,19 @@ public class DAOTest {
     // apple.year = 2000;
     logger.info(JsonbBuilder.create().toJson(apple));
     assertTrue(3 == dao.executeSql("DELETE FROM FRUIT", null));
+
+    TestData test = new TestData();
+    test.data = "{\"id\": 767}";
+    // dao2.setBean(test).insert();
+    // test.id = test.id + 1;
+    // dao2.setBean(test).insert();
+
+    test.id = 1;
+    dao2.setBean(test).insert();
+    test.data = null;
+    dao2.setBean(test).select();
+    logger.info(test.data.toString());
+
   }
 
 }

@@ -1,6 +1,7 @@
 package com.github.jlynx;
 
 import java.io.InputStream;
+import java.io.Serializable;
 import java.lang.reflect.Field;
 import java.sql.Timestamp;
 import java.util.ArrayList;
@@ -118,7 +119,12 @@ class BeanUtil {
    */
   static void setValue(String propertyOrColumn, Object target, Object value) {
 
-    if (value == null || value.getClass().getPackage().getName().startsWith("java") || value instanceof InputStream) {
+    // LoggerFactory.getLogger("jlynx").error(propertyOrColumn);
+    // LoggerFactory.getLogger("jlynx").error(value.toString());
+    // LoggerFactory.getLogger("jlynx").error(value.getClass().getName());
+
+    if (value == null || value.getClass().getPackage().getName().startsWith("java") || value instanceof InputStream
+        || value instanceof Serializable) {
 
       Field fieldToSet = getFieldIgnoreCase(target, propertyOrColumn);
 
