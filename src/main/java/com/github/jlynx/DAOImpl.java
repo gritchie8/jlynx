@@ -112,53 +112,53 @@ public class DAOImpl implements DAO {
       int type = rs.getMetaData().getColumnType(colIndex);
 
       switch (type) {
-      case Types.BLOB:
-      case Types.VARBINARY:
-      case Types.LONGVARBINARY:
-        value = rs.getBlob(colIndex);
-        if (value != null)
-          value = ((Blob) value).getBinaryStream();
-        break;
-      case Types.VARCHAR:
-      case Types.CHAR:
-      case Types.CLOB:
-      case Types.LONGVARCHAR:
-      case Types.NVARCHAR:
-      case Types.LONGNVARCHAR:
-        value = rs.getString(colIndex);
-        break;
-      case Types.TIMESTAMP:
-      case Types.TIMESTAMP_WITH_TIMEZONE:
-        value = rs.getObject(colIndex, LocalDateTime.class);
-        if (value == null)
-          value = rs.getTimestamp(colIndex);
-        break;
-      case Types.DATE:
-        value = rs.getObject(colIndex, LocalDate.class);
-        if (value == null)
-          value = rs.getDate(colIndex);
-        break;
-      case Types.INTEGER:
-      case Types.TINYINT:
-      case Types.SMALLINT:
-        value = rs.getInt(colIndex);
-        break;
-      case Types.BIGINT:
-        value = rs.getLong(colIndex);
-        break;
-      case Types.NUMERIC:
-      case Types.DECIMAL:
-        value = rs.getBigDecimal(colIndex);
-        break;
-      case Types.FLOAT:
-        value = rs.getFloat(colIndex);
-        break;
-      case Types.BIT:
-      case Types.BOOLEAN:
-        value = rs.getBoolean(colIndex);
-        break;
-      default:
-        value = rs.getObject(colIndex);
+        case Types.BLOB:
+        case Types.VARBINARY:
+        case Types.LONGVARBINARY:
+          value = rs.getBlob(colIndex);
+          if (value != null)
+            value = ((Blob) value).getBinaryStream();
+          break;
+        case Types.VARCHAR:
+        case Types.CHAR:
+        case Types.CLOB:
+        case Types.LONGVARCHAR:
+        case Types.NVARCHAR:
+        case Types.LONGNVARCHAR:
+          value = rs.getString(colIndex);
+          break;
+        case Types.TIMESTAMP:
+        case Types.TIMESTAMP_WITH_TIMEZONE:
+          value = rs.getObject(colIndex, LocalDateTime.class);
+          if (value == null)
+            value = rs.getTimestamp(colIndex);
+          break;
+        case Types.DATE:
+          value = rs.getObject(colIndex, LocalDate.class);
+          if (value == null)
+            value = rs.getDate(colIndex);
+          break;
+        case Types.INTEGER:
+        case Types.TINYINT:
+        case Types.SMALLINT:
+          value = rs.getInt(colIndex);
+          break;
+        case Types.BIGINT:
+          value = rs.getLong(colIndex);
+          break;
+        case Types.NUMERIC:
+        case Types.DECIMAL:
+          value = rs.getBigDecimal(colIndex);
+          break;
+        case Types.FLOAT:
+          value = rs.getFloat(colIndex);
+          break;
+        case Types.BIT:
+        case Types.BOOLEAN:
+          value = rs.getBoolean(colIndex);
+          break;
+        default:
+          value = rs.getObject(colIndex);
       }
 
       if (!entityMap.containsKey(object.getClass().getName()) && object.getClass().isAnnotationPresent(Table.class))
@@ -612,7 +612,7 @@ public class DAOImpl implements DAO {
       else
         result = _stmt.executeUpdate(sql);
 
-      if (result == 1 && supportsGetGeneratedKeys) {
+      if (result == 1 && supportsGetGeneratedKeys && _keys != null) {
 
         recordsAffected = 1;
         _rs = _stmt.getGeneratedKeys();
@@ -636,7 +636,8 @@ public class DAOImpl implements DAO {
           }
 
         }
-      }
+      } else
+        recordsAffected = result == 1 ? 1 : -1;
 
     } catch (SQLException e) {
       _logger.error(e.getMessage(), e);

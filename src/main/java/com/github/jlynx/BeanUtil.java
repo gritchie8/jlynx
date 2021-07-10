@@ -15,7 +15,7 @@ import org.slf4j.LoggerFactory;
 /**
  * Bean utilities used by jLynx.
  */
-class BeanUtil {
+public class BeanUtil {
 
   private final static Map<Class<?>, Field[]> cache = new HashMap<>();
 
@@ -86,7 +86,7 @@ class BeanUtil {
     }
   }
 
-  static void setValueFromString(Object bean, String property, String value) {
+  public static void setValueFromString(Object bean, String property, String value) {
 
     for (Field field : getFields(bean.getClass())) {
       if (field.getName().equalsIgnoreCase(property))
@@ -117,7 +117,7 @@ class BeanUtil {
   /**
    * This method performs in a case-insensitive manner
    */
-  static void setValue(String propertyOrColumn, Object target, Object value) {
+  public static void setValue(String propertyOrColumn, Object target, Object value) {
 
     // LoggerFactory.getLogger("jlynx").error(propertyOrColumn);
     // LoggerFactory.getLogger("jlynx").error(value.toString());
