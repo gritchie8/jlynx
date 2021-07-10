@@ -20,4 +20,4 @@ dependencies {
 }
 
 sourceCompatibility = '1.8'
-version = '2.2.0' //jlynx version
+version = '2.3.0' //jlynx version

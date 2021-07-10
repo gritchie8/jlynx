@@ -8,6 +8,10 @@ jLynx RELEASE NOTES
 jLynx CHANGE LOG
 ----------------
 
+#### v2.3.0 (Jul-21)
+    - exposed setValue methods in BeanUtil as public reflection helpers
+    - bug fix
+
 #### v2.2.0 (Apr-21)
     - renamed getList to listOf and adjusted throws to ReflectiveOperationException, SQLException
     - getFields responds in a more reliable fashion, excluding Collection types, interfaces and arrays without an annotation
