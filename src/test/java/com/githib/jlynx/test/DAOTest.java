@@ -3,6 +3,7 @@ package com.githib.jlynx.test;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertTrue;
 
+import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.util.List;
 
@@ -21,6 +22,7 @@ public class DAOTest {
 
   private DAO dao;
   private DAO dao2;
+  private DAO dao3;
   private Logger logger = LoggerFactory.getLogger("jlynx");
 
   @Before
@@ -29,7 +31,14 @@ public class DAOTest {
     logger.info("Creating new DAO");
     dao = DAOImpl.newInstance("jdbc:hsqldb:mem:jlynx", null);
     dao2 = DAOImpl.newInstance("jdbc:postgresql:contact_acme", null);
+    dao3 = DAOImpl.newInstance(
+        "jdbc:postgresql://korr-dev-3-datadbdbcluster30f691f1-17alffkc749vc.cluster-cgnovxxxt5vj.us-east-1.rds.amazonaws.com/?user=postgres&password=5gY-xKPK=TOGhHsF5-zr8g3_O,0Mjx",
+        null);
+
     assertNotNull(dao.getConnection());
+    assertNotNull(dao2.getConnection());
+    assertNotNull(dao3.getConnection());
+
     String ddl = "CREATE TABLE FRUIT ( ID INT PRIMARY KEY, NAME VARCHAR(20), COLOR VARCHAR(10), PRICE DECIMAL(10,2) DEFAULT 10.35,"
         + " PICKED DATE DEFAULT CURRENT_DATE, NOW TIMESTAMP DEFAULT CURRENT_TIMESTAMP )";
     dao.getConnection().setAutoCommit(false);
@@ -89,6 +98,12 @@ public class DAOTest {
     test.data = null;
     dao2.setBean(test).select();
     logger.info(test.data.toString());
+
+    Contact contact = new Contact();
+    contact.id = 1;
+    // assertTrue(dao3.setBean(contact).select());
+    ResultSet rs = dao3.getConnection().getMetaData().getPrimaryKeys(null, null, "contact");
+    assertTrue(rs.next());
 
   }
 
